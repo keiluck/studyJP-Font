@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppBar from "@mui/material/AppBar";
@@ -11,6 +12,7 @@ import Container from "@mui/material/Container";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import AuthGuard from "@/components/AuthGuard";
 import { useUserAuth } from "@/store/userAuth";
+import { fetchMe } from "@/api/user";
 
 export default function UserLayout({
   children,
@@ -18,7 +20,15 @@ export default function UserLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { user, clear } = useUserAuth();
+  const { user, clear, setUser } = useUserAuth();
+
+  // 挂载时用 token 换最新用户信息；token 失效时拦截器会清 token 并跳登录页
+  useEffect(() => {
+    if (localStorage.getItem("user_token")) {
+      fetchMe().then(setUser).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLogout = () => {
     clear();

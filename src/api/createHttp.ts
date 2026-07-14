@@ -34,6 +34,8 @@ export function createHttp({ tokenKey, loginPath }: HttpOptions): Http {
 
   const handleUnauthorized = () => {
     localStorage.removeItem(tokenKey);
+    // 已在登录页（如输错密码返回 401）时不重定向，交给表单展示错误
+    if (window.location.pathname === loginPath) return;
     const redirect = encodeURIComponent(
       window.location.pathname + window.location.search
     );
@@ -54,7 +56,9 @@ export function createHttp({ tokenKey, loginPath }: HttpOptions): Http {
     (error) => {
       if (error.response?.status === 401) {
         handleUnauthorized();
-        return Promise.reject(new Error("登录已过期，请重新登录"));
+        const message =
+          error.response?.data?.message || "登录已过期，请重新登录";
+        return Promise.reject(new Error(message));
       }
       const message =
         error.response?.data?.message || error.message || "网络异常，请稍后重试";
