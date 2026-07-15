@@ -1,18 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import Stack from "@mui/material/Stack";
 import IconButton from "@mui/material/IconButton";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import AudioPlayer, { TranslationMode } from "@/components/AudioPlayer";
 import SentenceItem, { renderRubyWords } from "@/components/SentenceItem";
 import { fetchArticleDetail } from "@/api/article";
-import type { ArticleDetail, Sentence } from "@/types";
+import { parseReaderParagraphs, splitSentences } from "@/lib/articleContent";
+import { annotateTexts } from "@/lib/furigana";
+import type { ArticleDetail, RubyWord } from "@/types";
 
 const formatDate = (createdAt: string) => {
   const date = new Date(createdAt.replace(" ", "T"));
@@ -26,6 +30,12 @@ const formatDate = (createdAt: string) => {
   });
 };
 
+/**
+ * 阅读页：后端富文本正文解析为逐段展示（假名标注/翻译/集中听力）。
+ * - 段落/翻译来自后台录入约定（日语段后紧跟中文段=翻译），见 lib/articleContent.ts；
+ * - 假名标注由前端 kuromoji 生成，见 lib/furigana.ts；
+ * - 后端暂无逐句时间轴，句音同步（点句跳播/播放高亮）待后端对齐数据就绪后启用。
+ */
 export default function ArticleReaderPage() {
   const { id } = useParams<{ id: string }>();
 
@@ -34,23 +44,21 @@ export default function ArticleReaderPage() {
   const [error, setError] = useState<string | null>(null);
 
   // 工具栏状态（页面持有，播放器受控）
-  const [activeSentenceId, setActiveSentenceId] = useState<string | null>(null);
   const [showRuby, setShowRuby] = useState(true);
   const [speed, setSpeed] = useState(1.0);
   const [translationMode, setTranslationMode] = useState<TranslationMode>("always");
   const [listeningMode, setListeningMode] = useState(false);
   const [listeningIndex, setListeningIndex] = useState(0);
   const [showText, setShowText] = useState(true);
-
-  const activeSentenceRef = useRef<HTMLDivElement | null>(null);
-  const listeningModeRef = useRef(listeningMode);
-  listeningModeRef.current = listeningMode;
+  const [audioIndex, setAudioIndex] = useState(0); // 多音频时当前曲目
 
   const load = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       setArticle(await fetchArticleDetail(Number(id)));
+      setAudioIndex(0);
+      setListeningIndex(0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载失败");
     } finally {
@@ -62,29 +70,32 @@ export default function ArticleReaderPage() {
     load();
   }, [load]);
 
-  const displaySentences = article?.sentences ?? [];
-
-  // 播放进度 → 高亮当前句
-  const handleTimeUpdate = useCallback(
-    (currentTime: number) => {
-      if (!article) return;
-      const idx = article.sentences.findIndex(
-        (s) => currentTime >= s.startTime && currentTime < s.endTime
-      );
-      if (idx !== -1) {
-        setActiveSentenceId(article.sentences[idx].id);
-        if (listeningModeRef.current) setListeningIndex(idx);
-      }
-    },
+  // 富文本 → 段落（阅读视图单元）与句子（集中听力单元）
+  const paragraphs = useMemo(
+    () => (article ? parseReaderParagraphs(article.content) : []),
     [article]
   );
+  const sentences = useMemo(
+    () => paragraphs.flatMap((p) => splitSentences(p.text)),
+    [paragraphs]
+  );
 
-  // 普通模式下高亮句变化时滚到屏幕中央
+  // 假名标注：段落与句子一批生成；词典加载完成前先显示纯文本
+  const [ruby, setRuby] = useState<{ paras: RubyWord[][]; sents: RubyWord[][] } | null>(null);
   useEffect(() => {
-    if (!listeningMode && activeSentenceRef.current) {
-      activeSentenceRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }, [activeSentenceId, listeningMode]);
+    setRuby(null);
+    if (paragraphs.length === 0) return;
+    let cancelled = false;
+    annotateTexts([...paragraphs.map((p) => p.text), ...sentences])
+      .then((all) => {
+        if (cancelled) return;
+        setRuby({ paras: all.slice(0, paragraphs.length), sents: all.slice(paragraphs.length) });
+      })
+      .catch((err) => console.warn("假名标注生成失败，按纯文本展示", err));
+    return () => {
+      cancelled = true;
+    };
+  }, [paragraphs, sentences]);
 
   // 听力模式锁背景滚动
   useEffect(() => {
@@ -94,43 +105,10 @@ export default function ArticleReaderPage() {
     };
   }, [listeningMode]);
 
-  /** 跳到第 idx 句并从其起点播放（听力模式上/下一句、普通模式点句共用） */
   const jumpToSentence = (idx: number) => {
-    if (!article) return;
-    const sentences = article.sentences;
     if (idx < 0 || idx >= sentences.length) return;
     setListeningIndex(idx);
-    setActiveSentenceId(sentences[idx].id);
-    const audio = document.querySelector("audio");
-    if (!audio) return;
-    audio.currentTime = sentences[idx].startTime;
-    audio.play().catch(console.error);
   };
-
-  const toggleListeningMode = () => {
-    setListeningMode((v) => !v);
-    // 进入时定位到当前高亮句，体验连贯
-    if (!listeningMode && activeSentenceId) {
-      const idx = displaySentences.findIndex((s) => s.id === activeSentenceId);
-      if (idx !== -1) setListeningIndex(idx);
-    }
-  };
-
-  /** 句子渲染（听力模式大字卡片用）：带假名标注，不做背景标注 */
-  const renderSentenceText = (sentence: Sentence) => (
-    <Box
-      component="p"
-      sx={{
-        m: 0,
-        fontSize: 22,
-        lineHeight: showRuby && sentence.rubyWords?.length ? 2.4 : 2,
-        wordBreak: "break-all",
-        color: "#1a1a2e",
-      }}
-    >
-      {renderRubyWords(sentence.text, sentence.rubyWords, showRuby, false)}
-    </Box>
-  );
 
   if (loading) {
     return (
@@ -154,10 +132,12 @@ export default function ArticleReaderPage() {
     );
   }
 
-  const listeningSentence = displaySentences[listeningIndex];
+  const audios = [...article.audios].sort((a, b) => a.sortOrder - b.sortOrder);
+  const currentAudio = audios[audioIndex];
+  const listeningSentence = sentences[listeningIndex];
 
   return (
-    <Box sx={{ maxWidth: 720, mx: "auto", pb: "220px" }}>
+    <Box sx={{ maxWidth: 720, mx: "auto", pb: currentAudio ? "220px" : 4 }}>
       {/* 封面 + 标题 + 日期 */}
       {article.coverUrl && (
         <Box
@@ -173,24 +153,40 @@ export default function ArticleReaderPage() {
       <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
         {article.title}
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        {formatDate(article.createdAt)}
-      </Typography>
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+        <Chip size="small" label={article.level} color="primary" variant="outlined" />
+        <Chip size="small" label={article.category} variant="outlined" />
+        <Typography variant="body2" color="text.secondary">
+          {formatDate(article.createdAt)}
+        </Typography>
+      </Stack>
 
-      {/* 句子列表 */}
-      <Box sx={{ bgcolor: "background.paper", borderRadius: 2, overflow: "hidden" }}>
-        {displaySentences.map((s, idx) => (
-          <div key={s.id} ref={activeSentenceId === s.id ? activeSentenceRef : null}>
-            <SentenceItem
-              text={s.text}
-              rubyWords={s.rubyWords}
-              translation={s.translation}
-              isActive={activeSentenceId === s.id}
-              showRuby={showRuby}
-              translationMode={translationMode}
-              onClick={() => jumpToSentence(idx)}
+      {/* 多音频时的曲目切换 */}
+      {audios.length > 1 && (
+        <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: "wrap", rowGap: 1 }}>
+          {audios.map((audio, index) => (
+            <Chip
+              key={audio.id}
+              label={audio.title || `音声 ${index + 1}`}
+              color={index === audioIndex ? "primary" : "default"}
+              onClick={() => setAudioIndex(index)}
             />
-          </div>
+          ))}
+        </Stack>
+      )}
+
+      {/* 段落列表：假名标注 + 段落翻译 */}
+      <Box sx={{ bgcolor: "background.paper", borderRadius: 2, overflow: "hidden" }}>
+        {paragraphs.map((p, idx) => (
+          <SentenceItem
+            key={p.id}
+            text={p.text}
+            rubyWords={ruby?.paras[idx]}
+            translation={p.translation}
+            isActive={false}
+            showRuby={showRuby}
+            translationMode={translationMode}
+          />
         ))}
       </Box>
 
@@ -208,15 +204,9 @@ export default function ArticleReaderPage() {
           }}
         >
           <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              px: 1,
-              py: 1.5,
-              bgcolor: "background.paper",
-            }}
+            sx={{ display: "flex", alignItems: "center", px: 1, py: 1.5, bgcolor: "background.paper" }}
           >
-            <IconButton onClick={toggleListeningMode} aria-label="戻る">
+            <IconButton onClick={() => setListeningMode(false)} aria-label="戻る">
               <ArrowBackIosNewIcon />
             </IconButton>
             <Typography sx={{ fontWeight: 700, fontSize: 18 }}>戻る</Typography>
@@ -233,17 +223,9 @@ export default function ArticleReaderPage() {
               }}
             >
               <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
-                <Typography
-                  sx={{
-                    bgcolor: "#f0f0f0",
-                    borderRadius: 4,
-                    px: 1.5,
-                    py: 0.5,
-                    fontSize: 14,
-                  }}
-                >
+                <Typography sx={{ bgcolor: "#f0f0f0", borderRadius: 4, px: 1.5, py: 0.5, fontSize: 14 }}>
                   <b>{listeningIndex + 1}</b>
-                  <span style={{ color: "#999" }}> / {displaySentences.length}</span>
+                  <span style={{ color: "#999" }}> / {sentences.length}</span>
                 </Typography>
                 <Typography
                   sx={{
@@ -260,7 +242,18 @@ export default function ArticleReaderPage() {
               </Box>
               {listeningSentence &&
                 (showText ? (
-                  renderSentenceText(listeningSentence)
+                  <Box
+                    component="p"
+                    sx={{
+                      m: 0,
+                      fontSize: 22,
+                      lineHeight: showRuby && ruby?.sents[listeningIndex]?.length ? 2.4 : 2,
+                      wordBreak: "break-all",
+                      color: "#1a1a2e",
+                    }}
+                  >
+                    {renderRubyWords(listeningSentence, ruby?.sents[listeningIndex], showRuby, false)}
+                  </Box>
                 ) : (
                   <Box
                     sx={{
@@ -283,18 +276,18 @@ export default function ArticleReaderPage() {
         </Box>
       )}
 
-      {/* 底部播放器（两模式共用，保持挂载音频不中断） */}
-      {article.audioUrl && (
+      {/* 底部播放器（两模式共用，保持挂载音频不中断）；切换曲目时重建重置进度 */}
+      {currentAudio && (
         <AudioPlayer
-          src={article.audioUrl}
-          onTimeUpdate={handleTimeUpdate}
+          key={currentAudio.url}
+          src={currentAudio.url}
           speed={speed}
           onSpeedChange={setSpeed}
           showRuby={showRuby}
           onToggleRuby={() => setShowRuby((v) => !v)}
           translationMode={translationMode}
           onTranslationModeChange={setTranslationMode}
-          onOpenListening={toggleListeningMode}
+          onOpenListening={sentences.length > 0 ? () => setListeningMode(true) : undefined}
           isListeningMode={listeningMode}
           showText={showText}
           onToggleText={() => setShowText((v) => !v)}

@@ -25,16 +25,18 @@ export type TranslationMode = "always" | "click" | "hidden";
 
 interface AudioPlayerProps {
   src: string;
-  onTimeUpdate: (currentTime: number) => void; // 每次 timeupdate 上报，驱动句子高亮
+  onTimeUpdate?: (currentTime: number) => void; // 每次 timeupdate 上报，驱动句子高亮
   onPlayingChange?: (isPlaying: boolean) => void;
   // 工具栏（受控，状态由页面持有）
   speed: number;
   onSpeedChange: (speed: number) => void;
-  showRuby: boolean; // 假名（振り仮名）显隐
-  onToggleRuby: () => void;
-  onOpenListening: () => void; // 切换集中听力模式
-  translationMode: TranslationMode;
-  onTranslationModeChange: (mode: TranslationMode) => void;
+  // 以下为逐句功能（假名/集中听力/翻译模式），依赖逐句数据；
+  // 未传对应回调时按钮不渲染（后端暂无 sentences 数据时的形态）
+  showRuby?: boolean; // 假名（振り仮名）显隐
+  onToggleRuby?: () => void;
+  onOpenListening?: () => void; // 切换集中听力模式
+  translationMode?: TranslationMode;
+  onTranslationModeChange?: (mode: TranslationMode) => void;
   // 集中听力模式专用
   isListeningMode?: boolean;
   showText?: boolean;
@@ -97,7 +99,7 @@ export default function AudioPlayer({
     if (!audio) return;
     const onTime = () => {
       setCurrentTime(audio.currentTime);
-      onTimeUpdate(audio.currentTime);
+      onTimeUpdate?.(audio.currentTime);
     };
     const onLoaded = () => {
       const d = audio.duration;
@@ -328,22 +330,25 @@ export default function AudioPlayer({
                 "スピード",
                 () => setSpeedOpen(true)
               )}
-              {toolButton(
-                <Typography
-                  sx={{
-                    fontWeight: 700,
-                    fontSize: 18,
-                    color: showRuby ? "#1a1a2e" : "#aaa",
-                    textDecoration: showRuby ? "none" : "line-through",
-                  }}
-                >
-                  あ
-                </Typography>,
-                "カタカナ",
-                onToggleRuby
-              )}
-              {toolButton(<HeadphonesIcon />, "集中的リスニング", onOpenListening)}
-              {toolButton(<TranslateIcon />, "通訳", () => setTransOpen(true))}
+              {onToggleRuby &&
+                toolButton(
+                  <Typography
+                    sx={{
+                      fontWeight: 700,
+                      fontSize: 18,
+                      color: showRuby ? "#1a1a2e" : "#aaa",
+                      textDecoration: showRuby ? "none" : "line-through",
+                    }}
+                  >
+                    あ
+                  </Typography>,
+                  "カタカナ",
+                  onToggleRuby
+                )}
+              {onOpenListening &&
+                toolButton(<HeadphonesIcon />, "集中的リスニング", onOpenListening)}
+              {onTranslationModeChange &&
+                toolButton(<TranslateIcon />, "通訳", () => setTransOpen(true))}
             </Box>
           </>
         )}
@@ -378,7 +383,7 @@ export default function AudioPlayer({
             <ListItemButton
               key={opt.value}
               onClick={() => {
-                onTranslationModeChange(opt.value);
+                onTranslationModeChange?.(opt.value);
                 setTransOpen(false);
               }}
             >

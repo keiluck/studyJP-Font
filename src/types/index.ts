@@ -54,7 +54,7 @@ export interface RubyWord {
   ruby?: string; // 振假名读音；纯假名等无需标注的词省略
 }
 
-/** 句子：跟读的最小单位 */
+/** 句子：跟读的最小单位（时间轴对齐数据待后端提供，当前未使用） */
 export interface Sentence {
   id: string;
   text: string; // 日语原文
@@ -64,19 +64,22 @@ export interface Sentence {
   rubyWords?: RubyWord[]; // 分词+假名标注；未分词句子为空
 }
 
-/** 文章详情（含正文与音频）。逐句展示与高亮一律以 sentences 为准。 */
+/**
+ * 文章详情（后端 ArticleDetailResponse）：富文本正文 + 多条音频。
+ * 阅读页将 content 解析为逐段展示（lib/articleContent.ts），
+ * 假名标注由前端 kuromoji 生成（lib/furigana.ts）；
+ * 逐句时间轴（句音同步）待后端对齐数据就绪后启用（Sentence 类型保留）。
+ */
 export interface ArticleDetail extends ArticleListItem {
-  content: string; // 日语全文（备份字段，展示以 sentences 为准）
-  translation: string | null; // 中文全文（备份字段）
+  content: string; // 富文本 HTML（后台 wangEditor 录入）
   status: number; // 0=草稿 1=已发布
-  audioUrl: string | null; // 音频 URL
-  sentences: Sentence[]; // 逐句数据（含时间轴与假名标注，由后端对齐流水线生成）
+  updatedAt: string;
+  audios: AudioItem[]; // 多条音频，按 sortOrder 升序展示
 }
 
-/** 音频（audio 表） */
+/** 音频（后端 AudioItem） */
 export interface AudioItem {
   id: number;
-  articleId: number;
   url: string;
   title: string | null;
   sortOrder: number;

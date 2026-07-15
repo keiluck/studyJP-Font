@@ -23,3 +23,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# kuromoji 词典（postinstall 从 node_modules 拷贝）
+/public/dict/

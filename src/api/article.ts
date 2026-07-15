@@ -5,10 +5,6 @@ import type {
   PageQuery,
   PageResult,
 } from "@/types";
-import { mockFetchArticleDetail, mockFetchArticles } from "./mock/article";
-
-// TODO: mock —— 后端阶段三接口就绪后置为 false 并删除 src/api/mock/
-const USE_MOCK = true;
 
 export interface ArticleQuery extends PageQuery {
   level?: string;
@@ -19,12 +15,10 @@ export interface ArticleQuery extends PageQuery {
 export function fetchArticles(
   params: ArticleQuery
 ): Promise<PageResult<ArticleListItem>> {
-  if (USE_MOCK) return mockFetchArticles(params);
   return request.get("/api/user/articles", { params });
 }
 
-/** 文章详情（含句子数据与音频） */
+/** 文章详情（富文本正文 + 音频列表） */
 export function fetchArticleDetail(id: number): Promise<ArticleDetail> {
-  if (USE_MOCK) return mockFetchArticleDetail(id);
   return request.get(`/api/user/articles/${id}`);
 }
