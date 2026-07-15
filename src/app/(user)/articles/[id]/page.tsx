@@ -14,12 +14,7 @@ import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import AudioPlayer, { TranslationMode } from "@/components/AudioPlayer";
 import SentenceItem, { renderRubyWords } from "@/components/SentenceItem";
 import { fetchArticleDetail } from "@/api/article";
-import {
-  indexAtFraction,
-  parseReaderParagraphs,
-  splitSentences,
-  startFractionOf,
-} from "@/lib/articleContent";
+import { indexAtFraction, parseReaderSentences, startFractionOf } from "@/lib/articleContent";
 import { annotateTexts } from "@/lib/furigana";
 import type { ArticleDetail, RubyWord } from "@/types";
 
@@ -36,10 +31,10 @@ const formatDate = (createdAt: string) => {
 };
 
 /**
- * 阅读页：后端富文本正文解析为逐段展示（假名标注/翻译/集中听力）。
- * - 段落/翻译来自后台录入约定（日语段后紧跟中文段=翻译），见 lib/articleContent.ts；
+ * 阅读页：后端富文本正文按 。！？ 自动分句展示（假名标注/翻译/集中听力）。
+ * - 分句与中文逐句配对规则见 lib/articleContent.ts（admin 整段粘贴即可）；
  * - 假名标注与词类着色由前端 kuromoji 生成，见 lib/furigana.ts；
- * - 后端暂无逐句时间轴，播放高亮/点段跳播按字符数比例估算（lib/articleContent.ts），
+ * - 后端暂无逐句时间轴，播放高亮/点句跳播按字符数比例估算（lib/articleContent.ts），
  *   待后端对齐数据就绪后替换为精确同步。
  */
 export default function ArticleReaderPage() {
@@ -57,9 +52,9 @@ export default function ArticleReaderPage() {
   const [listeningIndex, setListeningIndex] = useState(0);
   const [showText, setShowText] = useState(true);
   const [audioIndex, setAudioIndex] = useState(0); // 多音频时当前曲目
-  const [activeParaIndex, setActiveParaIndex] = useState<number | null>(null); // 当前朗读段落（估算）
+  const [activeIndex, setActiveIndex] = useState<number | null>(null); // 当前朗读句（估算）
 
-  const activeParaRef = useRef<HTMLDivElement | null>(null);
+  const activeRef = useRef<HTMLDivElement | null>(null);
   const listeningModeRef = useRef(listeningMode);
   listeningModeRef.current = listeningMode;
 
@@ -81,32 +76,28 @@ export default function ArticleReaderPage() {
     load();
   }, [load]);
 
-  // 富文本 → 段落（阅读视图单元，翻译按段落顺序配对）与句子（集中听力单元）
-  const paragraphs = useMemo(
-    () => (article ? parseReaderParagraphs(article.content, article.translation) : []),
+  // 富文本 → 逐句单元（阅读列表与集中听力共用；翻译已按句配对）
+  const units = useMemo(
+    () => (article ? parseReaderSentences(article.content, article.translation) : []),
     [article]
   );
-  const sentences = useMemo(
-    () => paragraphs.flatMap((p) => splitSentences(p.text)),
-    [paragraphs]
-  );
+  const unitTexts = useMemo(() => units.map((u) => u.text), [units]);
 
-  // 假名标注：段落与句子一批生成；词典加载完成前先显示纯文本
-  const [ruby, setRuby] = useState<{ paras: RubyWord[][]; sents: RubyWord[][] } | null>(null);
+  // 假名标注与词类：按句生成；词典加载完成前先显示纯文本
+  const [ruby, setRuby] = useState<RubyWord[][] | null>(null);
   useEffect(() => {
     setRuby(null);
-    if (paragraphs.length === 0) return;
+    if (unitTexts.length === 0) return;
     let cancelled = false;
-    annotateTexts([...paragraphs.map((p) => p.text), ...sentences])
+    annotateTexts(unitTexts)
       .then((all) => {
-        if (cancelled) return;
-        setRuby({ paras: all.slice(0, paragraphs.length), sents: all.slice(paragraphs.length) });
+        if (!cancelled) setRuby(all);
       })
       .catch((err) => console.warn("假名标注生成失败，按纯文本展示", err));
     return () => {
       cancelled = true;
     };
-  }, [paragraphs, sentences]);
+  }, [unitTexts]);
 
   // 听力模式锁背景滚动
   useEffect(() => {
@@ -116,48 +107,36 @@ export default function ArticleReaderPage() {
     };
   }, [listeningMode]);
 
-  const paraTexts = useMemo(() => paragraphs.map((p) => p.text), [paragraphs]);
-
-  // 播放进度 → 估算当前段/句并高亮（无时间轴，按字符数比例）
+  // 播放进度 → 估算当前句并高亮（无时间轴，按字符数比例）
   const handleTimeUpdate = useCallback(
     (currentTime: number) => {
       const audio = document.querySelector("audio");
       const duration = audio?.duration;
       if (!duration || !isFinite(duration) || duration <= 0) return;
       const fraction = Math.min(currentTime / duration, 0.9999);
-      setActiveParaIndex(indexAtFraction(paraTexts, fraction));
-      if (listeningModeRef.current) {
-        setListeningIndex(indexAtFraction(sentences, fraction));
-      }
+      const idx = indexAtFraction(unitTexts, fraction);
+      setActiveIndex(idx);
+      if (listeningModeRef.current) setListeningIndex(idx);
     },
-    [paraTexts, sentences]
+    [unitTexts]
   );
 
-  // 高亮段变化时滚到屏幕中央（普通模式）
+  // 高亮句变化时滚到屏幕中央（普通模式）
   useEffect(() => {
-    if (!listeningMode && activeParaRef.current) {
-      activeParaRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!listeningMode && activeRef.current) {
+      activeRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, [activeParaIndex, listeningMode]);
+  }, [activeIndex, listeningMode]);
 
-  /** 按估算起点跳播（texts 为估算基准：段落或句子） */
-  const seekToFraction = (texts: string[], idx: number) => {
+  /** 跳到第 idx 句的估算起点并播放（普通模式点句、听力模式上/下一句共用） */
+  const jumpToUnit = (idx: number) => {
+    if (idx < 0 || idx >= unitTexts.length) return;
+    setActiveIndex(idx);
+    setListeningIndex(idx);
     const audio = document.querySelector("audio");
     if (!audio || !isFinite(audio.duration) || audio.duration <= 0) return;
-    audio.currentTime = startFractionOf(texts, idx) * audio.duration;
+    audio.currentTime = startFractionOf(unitTexts, idx) * audio.duration;
     audio.play().catch(console.error); // 移动端自动播放策略可能拒绝
-  };
-
-  const jumpToParagraph = (idx: number) => {
-    if (idx < 0 || idx >= paraTexts.length) return;
-    setActiveParaIndex(idx);
-    seekToFraction(paraTexts, idx);
-  };
-
-  const jumpToSentence = (idx: number) => {
-    if (idx < 0 || idx >= sentences.length) return;
-    setListeningIndex(idx);
-    seekToFraction(sentences, idx);
   };
 
   if (loading) {
@@ -184,7 +163,7 @@ export default function ArticleReaderPage() {
 
   const audios = [...article.audios].sort((a, b) => a.sortOrder - b.sortOrder);
   const currentAudio = audios[audioIndex];
-  const listeningSentence = sentences[listeningIndex];
+  const listeningSentence = units[listeningIndex];
 
   return (
     <Box sx={{ maxWidth: 720, mx: "auto", pb: currentAudio ? "220px" : 4 }}>
@@ -225,18 +204,18 @@ export default function ArticleReaderPage() {
         </Stack>
       )}
 
-      {/* 段落列表：假名标注 + 词类背景着色 + 段落翻译；点击段落按估算起点跳播 */}
+      {/* 句子列表：假名标注 + 词类背景着色 + 逐句翻译；点击句子按估算起点跳播 */}
       <Box sx={{ bgcolor: "background.paper", borderRadius: 2, overflow: "hidden" }}>
-        {paragraphs.map((p, idx) => (
-          <div key={p.id} ref={activeParaIndex === idx ? activeParaRef : null}>
+        {units.map((u, idx) => (
+          <div key={u.id} ref={activeIndex === idx ? activeRef : null}>
             <SentenceItem
-              text={p.text}
-              rubyWords={ruby?.paras[idx]}
-              translation={p.translation}
-              isActive={activeParaIndex === idx}
+              text={u.text}
+              rubyWords={ruby?.[idx]}
+              translation={u.translation}
+              isActive={activeIndex === idx}
               showRuby={showRuby}
               translationMode={translationMode}
-              onClick={currentAudio ? () => jumpToParagraph(idx) : undefined}
+              onClick={currentAudio ? () => jumpToUnit(idx) : undefined}
             />
           </div>
         ))}
@@ -277,7 +256,7 @@ export default function ArticleReaderPage() {
               <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
                 <Typography sx={{ bgcolor: "#f0f0f0", borderRadius: 4, px: 1.5, py: 0.5, fontSize: 14 }}>
                   <b>{listeningIndex + 1}</b>
-                  <span style={{ color: "#999" }}> / {sentences.length}</span>
+                  <span style={{ color: "#999" }}> / {units.length}</span>
                 </Typography>
                 <Typography
                   sx={{
@@ -299,12 +278,12 @@ export default function ArticleReaderPage() {
                     sx={{
                       m: 0,
                       fontSize: 22,
-                      lineHeight: showRuby && ruby?.sents[listeningIndex]?.length ? 2.4 : 2,
+                      lineHeight: showRuby && ruby?.[listeningIndex]?.length ? 2.4 : 2,
                       wordBreak: "break-all",
                       color: "#1a1a2e",
                     }}
                   >
-                    {renderRubyWords(listeningSentence, ruby?.sents[listeningIndex], showRuby, false)}
+                    {renderRubyWords(listeningSentence.text, ruby?.[listeningIndex], showRuby, false)}
                   </Box>
                 ) : (
                   <Box
@@ -340,12 +319,12 @@ export default function ArticleReaderPage() {
           onToggleRuby={() => setShowRuby((v) => !v)}
           translationMode={translationMode}
           onTranslationModeChange={setTranslationMode}
-          onOpenListening={sentences.length > 0 ? () => setListeningMode(true) : undefined}
+          onOpenListening={units.length > 0 ? () => setListeningMode(true) : undefined}
           isListeningMode={listeningMode}
           showText={showText}
           onToggleText={() => setShowText((v) => !v)}
-          onPrevSentence={() => jumpToSentence(listeningIndex - 1)}
-          onNextSentence={() => jumpToSentence(listeningIndex + 1)}
+          onPrevSentence={() => jumpToUnit(listeningIndex - 1)}
+          onNextSentence={() => jumpToUnit(listeningIndex + 1)}
         />
       )}
     </Box>

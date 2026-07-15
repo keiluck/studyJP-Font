@@ -1,17 +1,18 @@
 /**
- * 后台富文本正文 → 阅读页逐段/逐句数据。
+ * 后台富文本正文 → 阅读页逐句数据。
  *
- * 录入约定（后台 wangEditor）：
- * - 每个日语段落一个 <p>；
- * - 中文翻译独立富文本（article.translation），段落顺序与正文一一对应；
- * - 兼容旧数据：正文内日语段落后紧跟的中文段落（不含假名）也视为该段翻译；
+ * 录入约定（后台 wangEditor，整段粘贴即可）：
+ * - 正文：日语整段粘贴，前端按 。！？ 自动分句，每句一个展示单元；
+ * - 翻译：article.translation 独立富文本，中文同样按 。！？ 分句，与日语句按顺序一一配对
+ *   （段落数一致时先按段配对再逐句配对；不一致时全文逐句顺序配对）；
+ * - 兼容旧数据：正文内日语段后紧跟的中文段（不含假名）也视为该段翻译；
  * - 后端暂无逐句时间轴，句音同步待后端对齐数据就绪后启用。
  */
 
-/** 阅读视图单元：一个日语段落 + 可选中文翻译（与参照样式一致，翻译跟在段落下方） */
-export interface ReaderParagraph {
+/** 阅读视图单元：一个日语句子 + 可选中文翻译（翻译跟在句子下方） */
+export interface ReaderSentence {
   id: string;
-  text: string; // 日语段落原文（纯文本）
+  text: string; // 日语句子原文（纯文本）
   translation: string; // 中文翻译；无则空串
 }
 
@@ -44,35 +45,70 @@ function extractBlocks(html: string): string[] {
   return blocks;
 }
 
-/** 富文本 → 段落列表；独立翻译富文本按段落顺序配对（优先），正文内嵌中文段作兼容回退 */
-export function parseReaderParagraphs(
-  html: string,
-  translationHtml?: string | null
-): ReaderParagraph[] {
-  const paragraphs: ReaderParagraph[] = [];
-  for (const block of extractBlocks(html)) {
-    const prev = paragraphs[paragraphs.length - 1];
-    if (isChinese(block) && prev && !prev.translation) {
-      prev.translation = block;
-    } else {
-      paragraphs.push({ id: `p${paragraphs.length}`, text: block, translation: "" });
-    }
-  }
-  if (translationHtml) {
-    const transBlocks = extractBlocks(translationHtml);
-    paragraphs.forEach((p, i) => {
-      if (transBlocks[i]) p.translation = transBlocks[i];
-    });
-  }
-  return paragraphs;
-}
-
-/** 段落 → 句子（集中听力的最小单位），按日文句读切分并保留标点 */
+/** 按句末标点（。．！？!?）切句并保留标点，中日文通用 */
 export function splitSentences(text: string): string[] {
   return text
     .split(/(?<=[。．！？!?])/)
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+/** 中间结构：一个日语段落切出的句子组 + 该段的中文句子（配对用） */
+interface SentenceGroup {
+  jp: string[];
+  cn: string[];
+}
+
+/** 富文本 → 逐句列表；日语按段分组切句，中文逐句按顺序配对 */
+export function parseReaderSentences(
+  html: string,
+  translationHtml?: string | null
+): ReaderSentence[] {
+  // 1. 正文块 → 句子组；内嵌中文块（旧数据兼容）配给前一个日语组
+  const groups: SentenceGroup[] = [];
+  for (const block of extractBlocks(html)) {
+    const prev = groups[groups.length - 1];
+    if (isChinese(block) && prev && prev.cn.length === 0) {
+      prev.cn = splitSentences(block);
+    } else {
+      groups.push({ jp: splitSentences(block), cn: [] });
+    }
+  }
+
+  // 2. 独立翻译富文本（优先于内嵌中文）：
+  //    段落数与日语组数一致时按段配对；否则全文逐句按顺序分配
+  if (translationHtml) {
+    const transBlocks = extractBlocks(translationHtml).filter((b) => b.trim());
+    if (transBlocks.length === groups.length) {
+      groups.forEach((g, i) => (g.cn = splitSentences(transBlocks[i])));
+    } else if (transBlocks.length > 0) {
+      const allCn = transBlocks.flatMap(splitSentences);
+      let cursor = 0;
+      for (const g of groups) {
+        g.cn = allCn.slice(cursor, cursor + g.jp.length);
+        cursor += g.jp.length;
+      }
+      // 中文句子多于日语句子时，余下的并入最后一句翻译
+      if (cursor < allCn.length && groups.length > 0) {
+        const last = groups[groups.length - 1];
+        if (last.cn.length === 0) last.cn = [""];
+        last.cn[last.cn.length - 1] += allCn.slice(cursor).join("");
+      }
+    }
+  }
+
+  // 3. 组内逐句配对展开；组内中文多出的并入该组最后一句
+  const units: ReaderSentence[] = [];
+  for (const g of groups) {
+    g.jp.forEach((text, i) => {
+      let translation = g.cn[i] ?? "";
+      if (i === g.jp.length - 1 && g.cn.length > g.jp.length) {
+        translation += g.cn.slice(g.jp.length).join("");
+      }
+      units.push({ id: `s${units.length}`, text, translation });
+    });
+  }
+  return units;
 }
 
 /**
