@@ -44,9 +44,9 @@ function LoginForm() {
   };
 
   return (
-    <Paper sx={{ maxWidth: 420, mx: "auto", p: 4 }}>
+    <Paper sx={{ width: "100%", maxWidth: 420, p: 4 }}>
       <Typography variant="h5" gutterBottom>
-        登录
+        用户登录
       </Typography>
       <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
         <Stack spacing={2} sx={{ mt: 1 }}>

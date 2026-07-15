@@ -3,7 +3,8 @@
 > 本文档为前端总体开发计划，按四个阶段推进。每阶段完成并测试通过后再进入下一阶段。
 > 后端接口约定见 `../studyJP-back/PLAN.md`。
 
->  登录 http://localhost:3000/admin/login 了。admin / Admin@123456 
+>  登录 http://localhost:3000/admin/login 了。admin / Admin@123456
+>  用户端登录/注册为独立页面（`src/app/(auth)/`，全屏居中、无网站框架），URL 仍为 /login、/register，登录后 router 跳转 /articles。
 
 ## 技术选型
 
