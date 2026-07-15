@@ -64,3 +64,30 @@ export function splitSentences(text: string): string[] {
     .map((s) => s.trim())
     .filter(Boolean);
 }
+
+/**
+ * 无逐句时间轴时的估算方案：假定朗读速度均匀，
+ * 按各文本单元字符数占比把整条音频时长分摊到每个单元。
+ * 待后端提供对齐数据（startTime/endTime）后替换为精确值。
+ */
+
+/** 播放进度比例 fraction ∈ [0,1] 估算落在第几个文本单元 */
+export function indexAtFraction(texts: string[], fraction: number): number {
+  const total = texts.reduce((sum, t) => sum + t.length, 0);
+  if (total === 0 || texts.length === 0) return 0;
+  let acc = 0;
+  for (let i = 0; i < texts.length; i++) {
+    acc += texts[i].length;
+    if (fraction < acc / total) return i;
+  }
+  return texts.length - 1;
+}
+
+/** 第 index 个文本单元的估算起始进度比例 */
+export function startFractionOf(texts: string[], index: number): number {
+  const total = texts.reduce((sum, t) => sum + t.length, 0);
+  if (total === 0) return 0;
+  let acc = 0;
+  for (let i = 0; i < Math.min(index, texts.length); i++) acc += texts[i].length;
+  return acc / total;
+}

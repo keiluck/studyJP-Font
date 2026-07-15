@@ -15,34 +15,26 @@ interface SentenceItemProps {
   onClick?: () => void; // 点句回调（接跳转播放）
 }
 
-/** 背景标注配色：高亮句内按词类型着色 */
+/** 词类背景配色（常显）：名词橙 / 动词绿 / 形容词粉 / 外来语蓝 */
 const typeColor: Record<string, string> = {
-  han: "#ffb74d", // 汉字：橙
-  katakana: "#4fc3f7", // 片假名：蓝
-  en: "#aed581", // 英数：绿
-  other: "transparent",
+  noun: "#ffe3bd",
+  verb: "#cdeccd",
+  adj: "#f9d8e5",
+  loan: "#c3e7fb",
 };
 
-const getWordType = (text: string) => {
-  if (/\p{Script=Han}/u.test(text)) return "han";
-  if (/[゠-ヿ]/.test(text)) return "katakana";
-  if (/[A-Za-z0-9]/.test(text)) return "en";
-  return "other";
-};
-
-/** 渲染分词：假名 <ruby> 标注 + 高亮句内背景标注（无分词时退回整句文本） */
+/** 渲染分词：假名 <ruby> 标注 + 词类背景着色（无分词时退回整句文本） */
 export function renderRubyWords(
   text: string,
   rubyWords: RubyWord[] | undefined,
   showRuby: boolean,
-  withHighlight: boolean
+  withColors: boolean
 ) {
   if (!rubyWords || rubyWords.length === 0) return text;
   return rubyWords.map((w, idx) => {
-    const type = getWordType(w.text);
     const wordStyle: React.CSSProperties = {
       backgroundColor:
-        withHighlight && type !== "other" ? typeColor[type] : "transparent",
+        withColors && w.wordType ? typeColor[w.wordType] : "transparent",
       borderRadius: 4,
       padding: "1px 4px",
       display: "inline-block",
@@ -85,8 +77,9 @@ export default function SentenceItem({
         px: 2,
         py: 1.5,
         cursor: "pointer",
-        bgcolor: isActive ? "#f0f7ff" : "transparent",
-        transition: "background 0.15s",
+        // 当前朗读段落：整段明显背景区分
+        bgcolor: isActive ? "#dceafe" : "transparent",
+        transition: "background 0.25s",
         borderBottom: "1px solid #f5f5f5",
       }}
     >
@@ -101,7 +94,7 @@ export default function SentenceItem({
           color: "#1a1a2e",
         }}
       >
-        {renderRubyWords(text, rubyWords, showRuby, isActive)}
+        {renderRubyWords(text, rubyWords, showRuby, true)}
       </Box>
       {/* 用 opacity 过渡而非条件渲染，click 模式切换时不跳动 */}
       {translationMode !== "hidden" && (

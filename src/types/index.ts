@@ -48,10 +48,14 @@ export interface ArticleListItem {
   createdAt: string;
 }
 
+/** 词类（背景着色用）：名词/动词/形容词/外来语（片假名），其余不着色 */
+export type WordType = "noun" | "verb" | "adj" | "loan";
+
 /** 分词单元：假名标注（振り仮名）的最小单位 */
 export interface RubyWord {
   text: string; // 词面（可能含汉字/片假名/英数）
   ruby?: string; // 振假名读音；纯假名等无需标注的词省略
+  wordType?: WordType; // kuromoji 词性映射，用于背景着色
 }
 
 /** 句子：跟读的最小单位（时间轴对齐数据待后端提供，当前未使用） */

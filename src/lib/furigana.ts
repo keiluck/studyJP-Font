@@ -1,4 +1,4 @@
-import type { RubyWord } from "@/types";
+import type { RubyWord, WordType } from "@/types";
 
 /**
  * 浏览器端假名（振り仮名）自动标注：kuromoji 分词 + 读音转平假名。
@@ -30,12 +30,22 @@ function getTokenizer(): Promise<Tokenizer> {
 }
 
 const KANJI_RE = /\p{Script=Han}/u;
+const KATAKANA_ONLY_RE = /^[ァ-ヶーｦ-ﾟ・\s]+$/; // 纯片假名词面 → 外来语
 
 /** 片假名 → 平假名（读音展示用） */
 const kataToHira = (s: string) =>
   s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
 
-/** 对一批文本分词并生成假名标注；仅含汉字的词标注 ruby */
+/** kuromoji 词性 → 着色词类；外来语（纯片假名）优先于词性判定 */
+function classifyWord(surface: string, pos: string): WordType | undefined {
+  if (KATAKANA_ONLY_RE.test(surface)) return "loan";
+  if (pos === "動詞") return "verb";
+  if (pos === "形容詞") return "adj";
+  if (pos === "名詞") return "noun";
+  return undefined;
+}
+
+/** 对一批文本分词并生成假名标注与词类；仅含汉字的词标注 ruby */
 export async function annotateTexts(texts: string[]): Promise<RubyWord[][]> {
   const tokenizer = await getTokenizer();
   return texts.map((text) =>
@@ -44,6 +54,8 @@ export async function annotateTexts(texts: string[]): Promise<RubyWord[][]> {
       if (KANJI_RE.test(token.surface_form) && token.reading && token.reading !== "*") {
         word.ruby = kataToHira(token.reading);
       }
+      const wordType = classifyWord(token.surface_form, token.pos);
+      if (wordType) word.wordType = wordType;
       return word;
     })
   );

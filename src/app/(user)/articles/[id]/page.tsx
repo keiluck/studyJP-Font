@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -14,7 +14,12 @@ import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import AudioPlayer, { TranslationMode } from "@/components/AudioPlayer";
 import SentenceItem, { renderRubyWords } from "@/components/SentenceItem";
 import { fetchArticleDetail } from "@/api/article";
-import { parseReaderParagraphs, splitSentences } from "@/lib/articleContent";
+import {
+  indexAtFraction,
+  parseReaderParagraphs,
+  splitSentences,
+  startFractionOf,
+} from "@/lib/articleContent";
 import { annotateTexts } from "@/lib/furigana";
 import type { ArticleDetail, RubyWord } from "@/types";
 
@@ -33,8 +38,9 @@ const formatDate = (createdAt: string) => {
 /**
  * 阅读页：后端富文本正文解析为逐段展示（假名标注/翻译/集中听力）。
  * - 段落/翻译来自后台录入约定（日语段后紧跟中文段=翻译），见 lib/articleContent.ts；
- * - 假名标注由前端 kuromoji 生成，见 lib/furigana.ts；
- * - 后端暂无逐句时间轴，句音同步（点句跳播/播放高亮）待后端对齐数据就绪后启用。
+ * - 假名标注与词类着色由前端 kuromoji 生成，见 lib/furigana.ts；
+ * - 后端暂无逐句时间轴，播放高亮/点段跳播按字符数比例估算（lib/articleContent.ts），
+ *   待后端对齐数据就绪后替换为精确同步。
  */
 export default function ArticleReaderPage() {
   const { id } = useParams<{ id: string }>();
@@ -51,6 +57,11 @@ export default function ArticleReaderPage() {
   const [listeningIndex, setListeningIndex] = useState(0);
   const [showText, setShowText] = useState(true);
   const [audioIndex, setAudioIndex] = useState(0); // 多音频时当前曲目
+  const [activeParaIndex, setActiveParaIndex] = useState<number | null>(null); // 当前朗读段落（估算）
+
+  const activeParaRef = useRef<HTMLDivElement | null>(null);
+  const listeningModeRef = useRef(listeningMode);
+  listeningModeRef.current = listeningMode;
 
   const load = useCallback(async () => {
     try {
@@ -105,9 +116,48 @@ export default function ArticleReaderPage() {
     };
   }, [listeningMode]);
 
+  const paraTexts = useMemo(() => paragraphs.map((p) => p.text), [paragraphs]);
+
+  // 播放进度 → 估算当前段/句并高亮（无时间轴，按字符数比例）
+  const handleTimeUpdate = useCallback(
+    (currentTime: number) => {
+      const audio = document.querySelector("audio");
+      const duration = audio?.duration;
+      if (!duration || !isFinite(duration) || duration <= 0) return;
+      const fraction = Math.min(currentTime / duration, 0.9999);
+      setActiveParaIndex(indexAtFraction(paraTexts, fraction));
+      if (listeningModeRef.current) {
+        setListeningIndex(indexAtFraction(sentences, fraction));
+      }
+    },
+    [paraTexts, sentences]
+  );
+
+  // 高亮段变化时滚到屏幕中央（普通模式）
+  useEffect(() => {
+    if (!listeningMode && activeParaRef.current) {
+      activeParaRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [activeParaIndex, listeningMode]);
+
+  /** 按估算起点跳播（texts 为估算基准：段落或句子） */
+  const seekToFraction = (texts: string[], idx: number) => {
+    const audio = document.querySelector("audio");
+    if (!audio || !isFinite(audio.duration) || audio.duration <= 0) return;
+    audio.currentTime = startFractionOf(texts, idx) * audio.duration;
+    audio.play().catch(console.error); // 移动端自动播放策略可能拒绝
+  };
+
+  const jumpToParagraph = (idx: number) => {
+    if (idx < 0 || idx >= paraTexts.length) return;
+    setActiveParaIndex(idx);
+    seekToFraction(paraTexts, idx);
+  };
+
   const jumpToSentence = (idx: number) => {
     if (idx < 0 || idx >= sentences.length) return;
     setListeningIndex(idx);
+    seekToFraction(sentences, idx);
   };
 
   if (loading) {
@@ -175,18 +225,20 @@ export default function ArticleReaderPage() {
         </Stack>
       )}
 
-      {/* 段落列表：假名标注 + 段落翻译 */}
+      {/* 段落列表：假名标注 + 词类背景着色 + 段落翻译；点击段落按估算起点跳播 */}
       <Box sx={{ bgcolor: "background.paper", borderRadius: 2, overflow: "hidden" }}>
         {paragraphs.map((p, idx) => (
-          <SentenceItem
-            key={p.id}
-            text={p.text}
-            rubyWords={ruby?.paras[idx]}
-            translation={p.translation}
-            isActive={false}
-            showRuby={showRuby}
-            translationMode={translationMode}
-          />
+          <div key={p.id} ref={activeParaIndex === idx ? activeParaRef : null}>
+            <SentenceItem
+              text={p.text}
+              rubyWords={ruby?.paras[idx]}
+              translation={p.translation}
+              isActive={activeParaIndex === idx}
+              showRuby={showRuby}
+              translationMode={translationMode}
+              onClick={currentAudio ? () => jumpToParagraph(idx) : undefined}
+            />
+          </div>
         ))}
       </Box>
 
@@ -281,6 +333,7 @@ export default function ArticleReaderPage() {
         <AudioPlayer
           key={currentAudio.url}
           src={currentAudio.url}
+          onTimeUpdate={handleTimeUpdate}
           speed={speed}
           onSpeedChange={setSpeed}
           showRuby={showRuby}
