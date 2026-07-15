@@ -52,13 +52,22 @@ export function fetchArticles(params: ArticleQuery) {
 - 401 由拦截器统一清 token + 跳登录页，**页面代码不要再判断 401**。
 - 页面里的错误处理只做用户提示（Snackbar/Alert），错误消息优先用后端返回的 `message`。
 
-## 4. 文件上传（管理端）
+## 4. 富文本字段约定
+
+文章有两个富文本字段（后端入库前 jsoup 白名单过滤）：
+
+- `content`：日语正文，**每个日语段落一个 `<p>`**；
+- `translation`：中文翻译（可空），**段落顺序与 content 一一对应**，阅读页按序配对做中日对照。
+
+管理端编辑页两个 wangEditor 分别录入；保存时空编辑器内容（`<p><br></p>`）要归一为空串再提交。
+
+## 5. 文件上传（管理端）
 
 - 音频：`POST /api/admin/upload/audio`（mp3/m4a/wav ≤50MB）
 - 图片：`POST /api/admin/upload/image`（jpg/png/webp ≤5MB）
 - 用 `FormData` + `adminRequest`，前端也做扩展名/大小预校验，失败给出明确提示；返回的 URL 直接可访问（后端静态映射 `/uploads/**`）。
 
-## 5. 联调自检
+## 6. 联调自检
 
 - 打开 DevTools Network 确认：请求头带对了 token、分页参数为 `page`/`pageSize`。
 - 用错误 token 或过期 token 验证会被重定向到对应登录页。

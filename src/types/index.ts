@@ -75,7 +75,8 @@ export interface Sentence {
  * 逐句时间轴（句音同步）待后端对齐数据就绪后启用（Sentence 类型保留）。
  */
 export interface ArticleDetail extends ArticleListItem {
-  content: string; // 富文本 HTML（后台 wangEditor 录入）
+  content: string; // 日语正文富文本 HTML（后台 wangEditor 录入）
+  translation: string | null; // 中文翻译富文本 HTML，段落顺序与 content 一一对应
   status: number; // 0=草稿 1=已发布
   updatedAt: string;
   audios: AudioItem[]; // 多条音频，按 sortOrder 升序展示
@@ -116,7 +117,8 @@ export interface AdminArticleListItem {
 
 /** 管理端文章详情（后端 ArticleDetailResponse，含正文与音频列表） */
 export interface AdminArticleDetail extends AdminArticleListItem {
-  content: string; // 富文本 HTML
+  content: string; // 日语正文富文本 HTML
+  translation: string | null; // 中文翻译富文本 HTML，段落与正文一一对应
   audios: AudioItem[];
 }
 
@@ -124,6 +126,7 @@ export interface AdminArticleDetail extends AdminArticleListItem {
 export interface ArticleSavePayload {
   title: string;
   content: string;
+  translation: string; // 中文翻译富文本（可空串），段落与正文一一对应
   level: string;
   category: string;
   coverUrl: string | null;

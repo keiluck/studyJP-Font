@@ -107,7 +107,8 @@ studyJP-Font/
 2. **阅读页** `/articles/[id]`（已接后端真实 API，mock 已删除）
    - `GET /api/user/articles/{id}` 返回富文本 `content` + 多条 `audios`。
    - **逐段展示**：前端解析富文本为段落（`lib/articleContent.ts`），`SentenceItem` 渲染（日语段落 + 中文翻译三态）。
-   - **录入约定**：后台 wangEditor 中每个日语段落一个 `<p>`，紧跟的中文段落（不含假名）自动识别为该段翻译。
+   - **中日对照翻译**：后台独立「中文翻译」富文本（`article.translation`），段落顺序与正文一一对应，阅读页按序配对展示在日语段下方；旧数据兼容正文内嵌中文段（日语段后紧跟不含假名的中文段=该段翻译）。通訳三态：表示（点中文可单独隐藏该段）/ クリックして表示（默认隐藏，显示「（クリックして翻訳を表示する）」占位，点击展开）/ 非表示。
+   - **录入约定**：后台 wangEditor 中每个日语段落一个 `<p>`，翻译编辑器中第 n 段对应正文第 n 段。
    - **假名标注 + 词类着色**：前端 kuromoji 分词生成（`lib/furigana.ts`，词典 `public/dict` 约 17MB，`postinstall` 从 node_modules 拷贝，已 gitignore）；「あ カタカナ」按钮全局显隐假名。词类背景色**常显**：名词 `#ffe3bd` 橙 / 动词 `#cdeccd` 绿 / 形容词 `#f9d8e5` 粉 / 外来语（纯片假名）`#c3e7fb` 蓝。
    - **播放跟随（估算）**：无逐句时间轴，按字符数比例把音频时长分摊到段/句（`indexAtFraction`/`startFractionOf`）；当前朗读段落整段背景高亮 `#dceafe` 并自动滚动居中，点击段落按估算起点跳播；待后端对齐数据就绪后替换为精确同步。
    - `AudioPlayer` 底部固定播放器：进度条拖动 ±10s、播放/暂停、±30s、七档变速与翻译模式 bottom-sheet、集中听力入口；多条音频以 Chip 切换曲目。

@@ -65,6 +65,7 @@ export default function ArticleEditPage() {
   const [category, setCategory] = useState<string>(CATEGORIES[0]);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [content, setContent] = useState("");
+  const [translation, setTranslation] = useState(""); // 中文翻译富文本，段落与正文一一对应
   const [audios, setAudios] = useState<AudioRow[]>([]);
 
   const [titleError, setTitleError] = useState<string | null>(null);
@@ -87,6 +88,7 @@ export default function ArticleEditPage() {
       setCategory(detail.category);
       setCoverUrl(detail.coverUrl);
       setContent(detail.content || "");
+      setTranslation(detail.translation || "");
       setAudios(
         [...detail.audios]
           .sort((a, b) => a.sortOrder - b.sortOrder)
@@ -150,6 +152,7 @@ export default function ArticleEditPage() {
       const payload: ArticleSavePayload = {
         title: title.trim(),
         content: content === EMPTY_HTML ? "" : content,
+        translation: translation === EMPTY_HTML ? "" : translation,
         level,
         category,
         coverUrl,
@@ -286,9 +289,17 @@ export default function ArticleEditPage() {
           {/* 正文富文本 */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              正文
+              正文（日语，每段一个段落）
             </Typography>
             <RichTextEditor value={content} onChange={setContent} />
+          </Box>
+
+          {/* 中文翻译富文本：段落顺序与正文一一对应，阅读页按段配对展示 */}
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              中文翻译（可选，段落顺序与正文一一对应）
+            </Typography>
+            <RichTextEditor value={translation} onChange={setTranslation} />
           </Box>
 
           {/* 音频列表：上传多条、可排序删除 */}

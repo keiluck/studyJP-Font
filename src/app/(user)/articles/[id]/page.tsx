@@ -81,9 +81,9 @@ export default function ArticleReaderPage() {
     load();
   }, [load]);
 
-  // 富文本 → 段落（阅读视图单元）与句子（集中听力单元）
+  // 富文本 → 段落（阅读视图单元，翻译按段落顺序配对）与句子（集中听力单元）
   const paragraphs = useMemo(
-    () => (article ? parseReaderParagraphs(article.content) : []),
+    () => (article ? parseReaderParagraphs(article.content, article.translation) : []),
     [article]
   );
   const sentences = useMemo(

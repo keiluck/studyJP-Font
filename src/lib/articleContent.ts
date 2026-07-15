@@ -3,7 +3,8 @@
  *
  * 录入约定（后台 wangEditor）：
  * - 每个日语段落一个 <p>；
- * - 日语段落后紧跟的中文段落（不含假名）视为该段的中文翻译；
+ * - 中文翻译独立富文本（article.translation），段落顺序与正文一一对应；
+ * - 兼容旧数据：正文内日语段落后紧跟的中文段落（不含假名）也视为该段翻译；
  * - 后端暂无逐句时间轴，句音同步待后端对齐数据就绪后启用。
  */
 
@@ -43,8 +44,11 @@ function extractBlocks(html: string): string[] {
   return blocks;
 }
 
-/** 富文本 → 段落列表；紧跟日语段的中文段合并为其翻译 */
-export function parseReaderParagraphs(html: string): ReaderParagraph[] {
+/** 富文本 → 段落列表；独立翻译富文本按段落顺序配对（优先），正文内嵌中文段作兼容回退 */
+export function parseReaderParagraphs(
+  html: string,
+  translationHtml?: string | null
+): ReaderParagraph[] {
   const paragraphs: ReaderParagraph[] = [];
   for (const block of extractBlocks(html)) {
     const prev = paragraphs[paragraphs.length - 1];
@@ -53,6 +57,12 @@ export function parseReaderParagraphs(html: string): ReaderParagraph[] {
     } else {
       paragraphs.push({ id: `p${paragraphs.length}`, text: block, translation: "" });
     }
+  }
+  if (translationHtml) {
+    const transBlocks = extractBlocks(translationHtml);
+    paragraphs.forEach((p, i) => {
+      if (transBlocks[i]) p.translation = transBlocks[i];
+    });
   }
   return paragraphs;
 }

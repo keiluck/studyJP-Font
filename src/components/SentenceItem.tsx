@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Box from "@mui/material/Box";
 import type { RubyWord } from "@/types";
 import type { TranslationMode } from "./AudioPlayer";
@@ -61,17 +61,19 @@ export default function SentenceItem({
   translationMode,
   onClick,
 }: SentenceItemProps) {
-  // click 模式下本句翻译的显隐开关
-  const [showTrans, setShowTrans] = useState(false);
+  // 本段翻译显隐的单独开关：null=跟随模式默认（always 显示 / click 隐藏）；
+  // 点中文隐藏、点占位（クリックして翻訳を表示する）恢复
+  const [revealed, setRevealed] = useState<boolean | null>(null);
+  useEffect(() => {
+    setRevealed(null); // 切换通訳模式时重置单独开关
+  }, [translationMode]);
 
-  const transVisible =
-    translationMode === "always" || (translationMode === "click" && showTrans);
+  const transVisible = revealed ?? translationMode === "always";
 
   return (
     <Box
       onClick={() => {
         onClick?.();
-        if (translationMode === "click") setShowTrans((v) => !v);
       }}
       sx={{
         px: 2,
@@ -96,23 +98,39 @@ export default function SentenceItem({
       >
         {renderRubyWords(text, rubyWords, showRuby, true)}
       </Box>
-      {/* 用 opacity 过渡而非条件渲染，click 模式切换时不跳动 */}
-      {translationMode !== "hidden" && (
-        <Box
-          component="p"
-          sx={{
-            m: 0,
-            mt: 0.5,
-            fontSize: 13,
-            color: "#888",
-            lineHeight: 1.5,
-            opacity: transVisible ? 1 : 0,
-            transition: "opacity 0.2s",
-          }}
-        >
-          {translation}
-        </Box>
-      )}
+      {/* 翻译区：显示中文（点它隐藏）或占位提示（点它显示）；hidden 模式与无翻译时不渲染 */}
+      {translationMode !== "hidden" &&
+        translation &&
+        (transVisible ? (
+          <Box
+            component="p"
+            onClick={(e) => {
+              e.stopPropagation(); // 不触发整段的跳播
+              setRevealed(false);
+            }}
+            sx={{ m: 0, mt: 0.5, fontSize: 13, color: "#888", lineHeight: 1.5 }}
+          >
+            {translation}
+          </Box>
+        ) : (
+          <Box
+            component="p"
+            onClick={(e) => {
+              e.stopPropagation();
+              setRevealed(true);
+            }}
+            sx={{
+              m: 0,
+              mt: 0.5,
+              fontSize: 13,
+              color: "#bbb",
+              lineHeight: 1.5,
+              textAlign: "center",
+            }}
+          >
+            （クリックして翻訳を表示する）
+          </Box>
+        ))}
     </Box>
   );
 }
