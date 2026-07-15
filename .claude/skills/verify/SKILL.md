@@ -29,9 +29,12 @@ const { chromium } = require("/Users/lany/.npm/_npx/e41f203b7505f1fb/node_module
 ## 坑
 
 - **dev server 运行中不要跑 `npm run build`**：两者共用 `.next` 目录，会把 dev 缓存写坏（页面资源全部 500）。恢复：停 dev → `rm -rf .next` → 重启 dev。需要 build 验证时先停 dev server。
+- **停 dev server 后确认端口真的释放了**：TaskStop/kill 掉 `npm run dev` 包装进程后，`next-server` 子进程可能残留并继续占着 3000（新起的 dev 会静默落到 3001，且残留进程因 `.next` 被删而资源 404/500）。每次启动前 `lsof -ti :3000 | xargs kill` 清场，并从 dev 日志确认实际端口。
 - 首次访问某路由 dev 编译较慢，断言超时给足 30s。
 
 ## 值得驱动的流程
+
+- 阅读页句音同步：`/articles/1` 点第 n 句后 `audio.currentTime` 应等于该句 `startTime`，且播放到该时间段时对应句高亮。mock 音频 `public/audio/001.mp3`（实为 M4A 容器）语音内容是「自己紹介」四句，与 mock 句子一一对应。
 
 - 认证闭环：未登录访问 `/articles` 被拦 → 注册（自动登录）→ 刷新登录态保持 → 退出 → 再拦截。
 - 登录页输错密码：应停留登录页并显示后端 message（拦截器对登录页 401 有特判）。

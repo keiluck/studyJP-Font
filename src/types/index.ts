@@ -48,11 +48,29 @@ export interface ArticleListItem {
   createdAt: string;
 }
 
-/** 文章详情（含正文与音频列表） */
+/** 分词单元：假名标注（振り仮名）的最小单位 */
+export interface RubyWord {
+  text: string; // 词面（可能含汉字/片假名/英数）
+  ruby?: string; // 振假名读音；纯假名等无需标注的词省略
+}
+
+/** 句子：跟读的最小单位 */
+export interface Sentence {
+  id: string;
+  text: string; // 日语原文
+  translation: string; // 中文翻译
+  startTime: number; // 在音频中的起始秒
+  endTime: number; // 结束秒
+  rubyWords?: RubyWord[]; // 分词+假名标注；未分词句子为空
+}
+
+/** 文章详情（含正文与音频）。逐句展示与高亮一律以 sentences 为准。 */
 export interface ArticleDetail extends ArticleListItem {
-  content: string; // 富文本 HTML，后端已做 XSS 过滤
+  content: string; // 日语全文（备份字段，展示以 sentences 为准）
+  translation: string | null; // 中文全文（备份字段）
   status: number; // 0=草稿 1=已发布
-  audios: AudioItem[];
+  audioUrl: string | null; // 音频 URL
+  sentences: Sentence[]; // 逐句数据（含时间轴与假名标注，由后端对齐流水线生成）
 }
 
 /** 音频（audio 表） */
