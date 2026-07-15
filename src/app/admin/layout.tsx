@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import AppBar from "@mui/material/AppBar";
@@ -33,6 +34,10 @@ export default function AdminLayout({
   const router = useRouter();
   const { admin, clear } = useAdminAuth();
 
+  // 登录态来自 localStorage（仅客户端），挂载后再渲染相关 UI，避免 SSR hydration 不一致
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const handleLogout = () => {
     clear();
     router.replace("/admin/login");
@@ -50,7 +55,7 @@ export default function AdminLayout({
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             日语学习 · 后台管理
           </Typography>
-          {admin && (
+          {mounted && admin && (
             <>
               <Typography variant="body2" sx={{ mr: 2 }}>
                 {admin.username}

@@ -87,3 +87,39 @@ export interface LoginResult<T = UserInfo> {
   token: string;
   user: T;
 }
+
+/** 管理端登录响应（后端 AdminLoginResponse，扁平结构） */
+export interface AdminLoginResult {
+  token: string;
+  id: number;
+  username: string;
+}
+
+/** 管理端文章列表项（后端 AdminArticleListItem，含状态与更新时间） */
+export interface AdminArticleListItem {
+  id: number;
+  title: string;
+  level: ArticleLevel;
+  category: string;
+  coverUrl: string | null;
+  status: number; // 0=草稿 1=已发布
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 管理端文章详情（后端 ArticleDetailResponse，含正文与音频列表） */
+export interface AdminArticleDetail extends AdminArticleListItem {
+  content: string; // 富文本 HTML
+  audios: AudioItem[];
+}
+
+/** 保存文章请求（后端 ArticleSaveRequest，新增/编辑共用） */
+export interface ArticleSavePayload {
+  title: string;
+  content: string;
+  level: string;
+  category: string;
+  coverUrl: string | null;
+  status: number; // 0=草稿 1=发布
+  audios: { url: string; title: string | null; sortOrder: number }[];
+}
