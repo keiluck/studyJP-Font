@@ -35,7 +35,7 @@ function ArticleList() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // 筛选与分页条件以 URL query 为准，刷新后保持
+  // 絞り込み条件とページング条件は URL クエリを基準とし、リロード後も保持される
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
   const level = searchParams.get("level") || "";
   const category = searchParams.get("category") || "";
@@ -57,7 +57,7 @@ function ArticleList() {
         })
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "加载失败");
+      setError(err instanceof Error ? err.message : "読み込みに失敗しました");
     } finally {
       setLoading(false);
     }
@@ -67,7 +67,7 @@ function ArticleList() {
     load();
   }, [load]);
 
-  /** 更新 URL query（筛选变化时重置到第 1 页） */
+  /** URL クエリを更新する（絞り込み条件変更時は1ページ目にリセット） */
   const updateQuery = (patch: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString());
     Object.entries(patch).forEach(([k, v]) => {
@@ -83,17 +83,17 @@ function ArticleList() {
     <Box>
       <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3, flexWrap: "wrap" }}>
         <Typography variant="h5" sx={{ flexGrow: 1 }}>
-          课程列表
+          コース一覧
         </Typography>
         <TextField
           select
           size="small"
-          label="等级"
+          label="レベル"
           value={level}
           onChange={(e) => updateQuery({ level: e.target.value, page: "" })}
           sx={{ minWidth: 120 }}
         >
-          <MenuItem value="">全部</MenuItem>
+          <MenuItem value="">すべて</MenuItem>
           {LEVELS.map((l) => (
             <MenuItem key={l} value={l}>
               {l}
@@ -103,12 +103,12 @@ function ArticleList() {
         <TextField
           select
           size="small"
-          label="分类"
+          label="カテゴリ"
           value={category}
           onChange={(e) => updateQuery({ category: e.target.value, page: "" })}
           sx={{ minWidth: 140 }}
         >
-          <MenuItem value="">全部</MenuItem>
+          <MenuItem value="">すべて</MenuItem>
           {CATEGORIES.map((c) => (
             <MenuItem key={c} value={c}>
               {c}
@@ -126,7 +126,7 @@ function ArticleList() {
           severity="error"
           action={
             <Button color="inherit" size="small" onClick={load}>
-              重试
+              再試行
             </Button>
           }
         >
@@ -134,7 +134,7 @@ function ArticleList() {
         </Alert>
       ) : !result || result.list.length === 0 ? (
         <Typography color="text.secondary" align="center" sx={{ py: 8 }}>
-          暂无课程
+          コースがありません
         </Typography>
       ) : (
         <>
@@ -216,7 +216,7 @@ function ArticleList() {
 }
 
 export default function ArticleListPage() {
-  // useSearchParams 需要 Suspense 边界（Next.js 静态预渲染要求）
+  // useSearchParams は Suspense 境界が必要（Next.js の静的プリレンダリングの要件）
   return (
     <Suspense
       fallback={

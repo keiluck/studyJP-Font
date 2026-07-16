@@ -1,22 +1,22 @@
 ---
 name: api-integration
-description: 对接后端接口的标准步骤，含双 axios 实例选择、类型定义、分页与错误处理约定
+description: バックエンドAPIと連携する際の標準手順。2つの axios インスタンスの使い分け、型定義、ページングとエラー処理の約束事を含む
 ---
 
-# 对接后端接口
+# バックエンドAPIとの連携
 
-## 1. 选对 axios 实例（关键）
+## 1. 正しい axios インスタンスを選ぶ（重要）
 
-| 接口前缀 | 实例 | token key |
+| APIプレフィックス | インスタンス | token key |
 |----------|------|-----------|
 | `/api/user/**` | `src/api/request.ts` | `user_token` |
 | `/api/admin/**` | `src/api/adminRequest.ts` | `admin_token` |
 
-两端严禁混用。新接口文件放置：用户端功能直接放 `src/api/`（如 `article.ts`），管理端功能放 `src/api/admin/`。
+両者の混用は厳禁。新しいAPIファイルの配置：ユーザー側の機能は直接 `src/api/`（例：`article.ts`）に、管理側の機能は `src/api/admin/` に配置する。
 
-## 2. 定义类型（src/types/）
+## 2. 型を定義する（src/types/）
 
-与后端 DTO 字段完全一致。分页响应统一为：
+バックエンドの DTO のフィールドと完全に一致させる。ページングレスポンスは統一して以下の形とする：
 
 ```ts
 export interface PageResult<T> {
@@ -27,7 +27,7 @@ export interface PageResult<T> {
 }
 ```
 
-## 3. 编写接口函数
+## 3. API関数を書く
 
 ```ts
 // src/api/article.ts
@@ -35,7 +35,7 @@ import request from "./request";
 import type { Article, PageResult } from "@/types";
 
 export interface ArticleQuery {
-  page: number;      // 从 1 开始
+  page: number;      // 1始まり
   pageSize: number;
   level?: string;
   category?: string;
@@ -46,29 +46,29 @@ export function fetchArticles(params: ArticleQuery) {
 }
 ```
 
-约定：
+約束事：
 
-- 拦截器已把 `{ code, message, data }` 解包成 `data` 并在非 200 时抛错，业务函数直接返回数据类型。
-- 401 由拦截器统一清 token + 跳登录页，**页面代码不要再判断 401**。
-- 页面里的错误处理只做用户提示（Snackbar/Alert），错误消息优先用后端返回的 `message`。
+- インターセプターが既に `{ code, message, data }` を `data` に解包し、200 以外の場合はエラーを投げる。業務関数はそのままデータの型を返せばよい。
+- 401 はインターセプターが統一的に token をクリアしてログインページへ遷移する。**ページ側のコードで401を再判定しないこと**。
+- ページ内のエラー処理はユーザーへの通知（Snackbar/Alert）のみとし、エラーメッセージはバックエンドが返す `message` を優先して使用する。
 
-## 4. 富文本字段约定
+## 4. リッチテキストフィールドの約束事
 
-文章有两个富文本字段（后端入库前 jsoup 白名单过滤）：
+記事には2つのリッチテキストフィールドがある（バックエンドの登録前に jsoup のホワイトリストでフィルタ済み）：
 
-- `content`：日语正文，**整段粘贴即可**，前端按 `。！？` 自动分句展示；
-- `translation`：中文翻译（可空），同样整段粘贴，前端自动分句后与日语句**按顺序一一配对**（两边按 `。！？` 切出的句子数一致即可对上）。
+- `content`：日本語本文。**段落単位でそのまま貼り付ければよく**、フロント側で `。！？` により自動分文して表示する。
+- `translation`：中国語訳（空の場合あり）。同様に段落単位でそのまま貼り付ければよく、フロント側で自動分文した後、日本語の文と**順番通りに一対一で対応付ける**（両者を `。！？` で分割した文の数が一致していれば対応付けられる）。
 
-管理端编辑页两个 wangEditor 分别录入；保存时空编辑器内容（`<p><br></p>`）要归一为空串再提交。
+管理側の編集ページでは2つの wangEditor でそれぞれ入力する。保存時は空のエディタ内容（`<p><br></p>`）を空文字に正規化してから送信すること。
 
-## 5. 文件上传（管理端）
+## 5. ファイルアップロード（管理側）
 
-- 音频：`POST /api/admin/upload/audio`（mp3/m4a/wav ≤50MB）
-- 图片：`POST /api/admin/upload/image`（jpg/png/webp ≤5MB）
-- 用 `FormData` + `adminRequest`，前端也做扩展名/大小预校验，失败给出明确提示；返回的 URL 直接可访问（后端静态映射 `/uploads/**`）。
+- 音声：`POST /api/admin/upload/audio`（mp3/m4a/wav、50MB以下）
+- 画像：`POST /api/admin/upload/image`（jpg/png/webp、5MB以下）
+- `FormData` ＋ `adminRequest` を使用する。フロント側でも拡張子/サイズの事前チェックを行い、失敗時は明確なメッセージを表示する。返された URL はそのままアクセス可能（バックエンドの静的マッピング `/uploads/**`）。
 
-## 6. 联调自检
+## 6. 結合テスト時のセルフチェック
 
-- 打开 DevTools Network 确认：请求头带对了 token、分页参数为 `page`/`pageSize`。
-- 用错误 token 或过期 token 验证会被重定向到对应登录页。
-- 后端接口未就绪时可在 api 层临时返回假数据，但要加 `// TODO: mock` 标记，联调时移除。
+- DevTools の Network で確認：リクエストヘッダーに正しい token が付与されているか、ページングパラメータが `page`/`pageSize` になっているか。
+- 誤った token や期限切れの token で対応するログインページへリダイレクトされることを確認する。
+- バックエンドのAPIが未整備の場合は api 層で一時的にダミーデータを返してよいが、`// TODO: mock` の目印を付け、結合テスト時に取り除くこと。

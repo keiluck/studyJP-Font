@@ -21,8 +21,8 @@ import { useAdminAuth } from "@/store/adminAuth";
 const DRAWER_WIDTH = 220;
 
 const MENU = [
-  { label: "用户管理", href: "/admin/users", icon: <PeopleIcon /> },
-  { label: "文章管理", href: "/admin/articles", icon: <ArticleIcon /> },
+  { label: "ユーザー管理", href: "/admin/users", icon: <PeopleIcon /> },
+  { label: "記事管理", href: "/admin/articles", icon: <ArticleIcon /> },
 ];
 
 export default function AdminLayout({
@@ -34,7 +34,7 @@ export default function AdminLayout({
   const router = useRouter();
   const { admin, clear } = useAdminAuth();
 
-  // 登录态来自 localStorage（仅客户端），挂载后再渲染相关 UI，避免 SSR hydration 不一致
+  // ログイン状態は localStorage（クライアント側のみ）から取得するため、マウント後に関連 UI を描画し SSR ハイドレーションの不一致を防ぐ
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -43,7 +43,7 @@ export default function AdminLayout({
     router.replace("/admin/login");
   };
 
-  // 登录页不渲染管理端框架
+  // ログインページでは管理画面のフレームを描画しない
   if (pathname === "/admin/login") {
     return <AuthGuard role="admin">{children}</AuthGuard>;
   }
@@ -53,7 +53,7 @@ export default function AdminLayout({
       <AppBar position="fixed" sx={{ zIndex: (t) => t.zIndex.drawer + 1 }}>
         <Toolbar>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            日语学习 · 后台管理
+            日本語学習 · 管理画面
           </Typography>
           {mounted && admin && (
             <>
@@ -61,7 +61,7 @@ export default function AdminLayout({
                 {admin.username}
               </Typography>
               <Button color="inherit" onClick={handleLogout}>
-                退出
+                ログアウト
               </Button>
             </>
           )}

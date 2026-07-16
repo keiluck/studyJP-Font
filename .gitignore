@@ -24,5 +24,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# kuromoji 词典（postinstall 从 node_modules 拷贝）
+# kuromoji 辞書（postinstall で node_modules からコピー）
 /public/dict/

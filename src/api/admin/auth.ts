@@ -6,7 +6,7 @@ export interface AdminLoginParams {
   password: string;
 }
 
-/** 管理员登录，token 由页面存入 admin_token */
+/** 管理者ログイン。token はページ側で admin_token に保存する */
 export function adminLogin(params: AdminLoginParams): Promise<AdminLoginResult> {
   return adminRequest.post("/api/admin/login", params);
 }

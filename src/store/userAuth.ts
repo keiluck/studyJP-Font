@@ -7,11 +7,11 @@ const USER_KEY = "user_info";
 interface UserAuthState {
   token: string | null;
   user: UserInfo | null;
-  /** 登录成功后写入 token 与用户信息（同步持久化到 localStorage） */
+  /** ログイン成功後に token とユーザー情報を書き込む（同時に localStorage へ永続化） */
   setAuth: (token: string, user: UserInfo) => void;
-  /** 更新用户信息（如 /api/user/me 刷新） */
+  /** ユーザー情報を更新する（/api/user/me での再取得など） */
   setUser: (user: UserInfo) => void;
-  /** 退出登录 */
+  /** ログアウトする */
   clear: () => void;
 }
 

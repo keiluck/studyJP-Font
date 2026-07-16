@@ -34,7 +34,7 @@ function AdminLoginForm() {
       const { token, id, username } = await adminLogin(values);
       setAuth(token, { id, username, status: 1 });
       const redirect = searchParams.get("redirect");
-      // 只允许管理端站内路径，防开放重定向
+      // 管理画面内のパスのみ許可し、オープンリダイレクトを防止する
       router.replace(
         redirect?.startsWith("/admin") ? redirect : "/admin/articles"
       );
@@ -56,29 +56,29 @@ function AdminLoginForm() {
     >
       <Paper sx={{ width: 420, p: 4 }}>
         <Typography variant="h5" gutterBottom>
-          后台管理登录
+          管理画面ログイン
         </Typography>
         <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {error && <Alert severity="error">{error}</Alert>}
             <TextField
-              label="管理员账号"
+              label="管理者アカウント"
               autoComplete="username"
               autoFocus
               error={!!errors.username}
               helperText={errors.username?.message}
-              {...field("username", { required: "请输入管理员账号" })}
+              {...field("username", { required: "管理者アカウントを入力してください" })}
             />
             <TextField
-              label="密码"
+              label="パスワード"
               type="password"
               autoComplete="current-password"
               error={!!errors.password}
               helperText={errors.password?.message}
-              {...field("password", { required: "请输入密码" })}
+              {...field("password", { required: "パスワードを入力してください" })}
             />
             <Button type="submit" variant="contained" size="large" disabled={submitting}>
-              {submitting ? "登录中…" : "登录"}
+              {submitting ? "ログイン中…" : "ログイン"}
             </Button>
           </Stack>
         </Box>

@@ -1,29 +1,29 @@
-# 日语学习网站 — 前端开发 Plan（studyJP-Font）
+# 日本語学習サイト — フロントエンド開発 Plan（studyJP-Font）
 
-> 本文档为前端总体开发计划，按四个阶段推进。每阶段完成并测试通过后再进入下一阶段。
-> 后端接口约定见 `../studyJP-back/PLAN.md`。
+> 本ドキュメントはフロントエンドの全体開発計画であり、4つのフェーズに分けて進める。各フェーズが完了しテストに合格してから次のフェーズへ進むこと。
+> バックエンドのAPI仕様は `../studyJP-back/PLAN.md` を参照。
 
->  登录 http://localhost:3000/admin/login 了。admin / Admin@123456
->  用户端登录/注册为独立页面（`src/app/(auth)/`，全屏居中、无网站框架），URL 仍为 /login、/register，登录后 router 跳转 /articles。
+>  http://localhost:3000/admin/login からログインできる。admin / Admin@123456
+>  ユーザー側のログイン/登録は独立したページ（`src/app/(auth)/`、全画面中央表示、サイト共通フレーム無し）で、URL は /login、/register のまま。ログイン後は router で /articles に遷移する。
 
-## 技术选型
+## 技術選定
 
-| 项目 | 选择 | 理由 |
+| 項目 | 選択 | 理由 |
 |------|------|------|
-| 框架 | React 18 + Next.js 14（App Router） | 需求指定；文件式路由，无需 react-router |
-| UI 库 | MUI 5（@mui/material + @mui/icons-material） | 需求指定；DataGrid 可用于后台表格 |
-| HTTP | axios | 拦截器统一处理 token 和错误 |
-| 状态管理 | Zustand | 轻量，只需管理登录态等少量全局状态 |
-| 富文本编辑器 | wangEditor 5 | MUI 无富文本组件；wangEditor 轻量、中文文档好 |
-| 语言 | TypeScript | 接口类型与后端 DTO 对齐，减少低级错误 |
+| フレームワーク | React 18 + Next.js 14（App Router） | 要件で指定；ファイルベースルーティングのため react-router 不要 |
+| UIライブラリ | MUI 5（@mui/material + @mui/icons-material） | 要件で指定；DataGrid は管理画面のテーブルに利用可能 |
+| HTTP | axios | インターセプターで token とエラーを一元処理 |
+| 状態管理 | Zustand | 軽量で、ログイン状態など少数のグローバル状態管理のみに必要十分 |
+| リッチテキストエディタ | wangEditor 5 | MUI にはリッチテキストコンポーネントが無い；wangEditor は軽量でドキュメントも充実 |
+| 言語 | TypeScript | インターフェースの型をバックエンドの DTO と揃え、初歩的なミスを削減 |
 
-说明：
+補足：
 
-- 前台用户端与后台管理端放在**同一个 Next.js 项目**中，通过路由前缀区分（`/` 用户端、`/admin` 管理端），token 与登录体系完全隔离（分别存 `user_token` / `admin_token`）。
-- 本项目为登录后使用的学习/管理系统，不依赖 SEO，页面统一采用**客户端渲染**（`"use client"` + 客户端请求后端 API），不做 SSR 数据获取，避免 token 在服务端/客户端两头管理的复杂度。
-- 开发环境通过 `next.config.js` 的 `rewrites` 把 `/api/**` 转发到 `http://localhost:8080`，避免跨域。
+- ユーザー側と管理側は**同一の Next.js プロジェクト**内に配置し、ルートプレフィックスで区別する（`/` がユーザー側、`/admin` が管理側）。token とログイン体系は完全に分離する（それぞれ `user_token` / `admin_token` として保存）。
+- 本プロジェクトはログイン後に使用する学習/管理システムであり、SEO に依存しないため、全ページで**クライアント側レンダリング**を統一採用する（`"use client"` ＋ クライアント側からバックエンド API を呼び出す）。SSR でのデータ取得は行わず、サーバー側/クライアント側の両方で token を管理する複雑さを避ける。
+- 開発環境では `next.config.js` の `rewrites` により `/api/**` を `http://localhost:8080` へ転送し、クロスオリジン問題を回避する。
 
-## 目录结构
+## ディレクトリ構成
 
 ```
 studyJP-Font/
@@ -31,113 +31,113 @@ studyJP-Font/
 ├── package.json
 ├── tsconfig.json
 └── src/
-    ├── app/                          # App Router 页面（文件式路由）
-    │   ├── layout.tsx                # 根布局（MUI ThemeProvider、CssBaseline）
-    │   ├── page.tsx                  # 首页 → 重定向到 /articles
-    │   ├── (user)/                   # 前台用户端分组
-    │   │   ├── layout.tsx            # 用户端布局（顶部 AppBar 导航）+ 用户守卫
+    ├── app/                          # App Router ページ（ファイルベースルーティング）
+    │   ├── layout.tsx                # ルートレイアウト（MUI ThemeProvider、CssBaseline）
+    │   ├── page.tsx                  # トップページ → /articles へリダイレクト
+    │   ├── (user)/                   # ユーザー側グループ
+    │   │   ├── layout.tsx            # ユーザー側レイアウト（上部 AppBar ナビゲーション）＋ ユーザーガード
     │   │   ├── login/page.tsx
     │   │   ├── register/page.tsx
     │   │   └── articles/
-    │   │       ├── page.tsx          # 课程列表
-    │   │       └── [id]/page.tsx     # 课程详情（含语音播放）
-    │   └── admin/                    # 后台管理端
-    │       ├── layout.tsx            # 管理端布局（侧边 Drawer 菜单）+ 管理守卫
+    │   │       ├── page.tsx          # コース一覧
+    │   │       └── [id]/page.tsx     # コース詳細（音声再生を含む）
+    │   └── admin/                    # 管理側
+    │       ├── layout.tsx            # 管理側レイアウト（サイドDrawerメニュー）＋ 管理ガード
     │       ├── login/page.tsx
-    │       ├── users/page.tsx        # 用户管理
+    │       ├── users/page.tsx        # ユーザー管理
     │       └── articles/
-    │           ├── page.tsx          # 文章列表（状态筛选）
-    │           └── edit/[[...id]]/page.tsx  # 新增/编辑（富文本 + 音频上传）
-    ├── api/                 # 接口封装
-    │   ├── request.ts       # axios 实例（用户端，携带 user_token）
-    │   ├── adminRequest.ts  # axios 实例（管理端，携带 admin_token）
-    │   ├── user.ts          # 登录/注册
-    │   ├── article.ts       # 文章列表/详情
-    │   └── admin/           # 后台接口（用户管理、文章管理、上传）
+    │           ├── page.tsx          # 記事一覧（状態絞り込み）
+    │           └── edit/[[...id]]/page.tsx  # 新規作成/編集（リッチテキスト＋音声アップロード）
+    ├── api/                 # API 呼び出しのラッパー
+    │   ├── request.ts       # axios インスタンス（ユーザー側、user_token を保持）
+    │   ├── adminRequest.ts  # axios インスタンス（管理側、admin_token を保持）
+    │   ├── user.ts          # ログイン/登録
+    │   ├── article.ts       # 記事一覧/詳細
+    │   └── admin/           # 管理側API（ユーザー管理、記事管理、アップロード）
     ├── store/
-    │   ├── userAuth.ts      # 用户端登录态
-    │   └── adminAuth.ts     # 管理端登录态
+    │   ├── userAuth.ts      # ユーザー側ログイン状態
+    │   └── adminAuth.ts     # 管理側ログイン状態
     ├── components/
-    │   ├── AuthGuard.tsx    # 客户端路由守卫（用户端/管理端复用，传入角色）
-    │   └── AudioPlayer.tsx  # 语音播放器
+    │   ├── AuthGuard.tsx    # クライアント側ルートガード（ユーザー側/管理側で共用、role を渡す）
+    │   └── AudioPlayer.tsx  # 音声プレイヤー
     ├── theme/
-    │   └── index.ts         # MUI 主题定制
-    └── types/               # 与后端 DTO 对齐的类型定义
+    │   └── index.ts         # MUI テーマのカスタマイズ
+    └── types/               # バックエンドの DTO に対応する型定義
 ```
 
-## 通用约定
+## 共通の約束事
 
-- 所有列表页支持分页，参数统一 `page`（从 1 开始）+ `pageSize`。
-- 后端统一响应格式 `{ code, message, data }`，axios 拦截器统一解包；`code === 401` 时清除 token 并跳转对应登录页。
-- 登录守卫在各分组 `layout.tsx` 中通过客户端组件实现：无 token 时 `router.replace` 到对应登录页。
+- 全ての一覧ページはページングに対応し、パラメータは統一して `page`（1始まり）＋ `pageSize` とする。
+- バックエンドの共通レスポンス形式は `{ code, message, data }` で、axios インターセプターで統一的に解包する。`code === 401` の場合は token をクリアし、対応するログインページへ遷移する。
+- ログインガードは各グループの `layout.tsx` 内でクライアントコンポーネントとして実装する：token が無い場合は `router.replace` で対応するログインページへ遷移する。
 
 ---
 
-## 阶段一：基础框架搭建
+## フェーズ1：基盤構築
 
-**目标**：项目可启动，路由骨架跑通。
+**目標**：プロジェクトが起動し、ルーティングの骨格が動作すること。
 
-1. `npx create-next-app@latest`（TypeScript + App Router + src 目录），安装 @mui/material、@emotion/react、@emotion/styled、@mui/icons-material、axios、zustand。
-2. 配置 MUI：根布局挂 `ThemeProvider` + `CssBaseline`，接入 Next.js 的 `@mui/material-nextjs` App Router 适配（缓存 emotion 样式）。
-3. 配置 `next.config.js` rewrites：`/api/:path*` → `http://localhost:8080/api/:path*`。
-4. 搭建路由骨架：用户端布局（AppBar）、管理端布局（Drawer）+ 空白占位页面。
-5. 封装 axios 实例与统一响应处理。
+1. `npx create-next-app@latest`（TypeScript + App Router + src ディレクトリ）を実行し、@mui/material、@emotion/react、@emotion/styled、@mui/icons-material、axios、zustand をインストールする。
+2. MUI を設定：ルートレイアウトに `ThemeProvider` ＋ `CssBaseline` を配置し、Next.js の `@mui/material-nextjs` App Router アダプタ（emotion スタイルのキャッシュ）を導入する。
+3. `next.config.js` の rewrites を設定：`/api/:path*` → `http://localhost:8080/api/:path*`。
+4. ルーティングの骨格を構築：ユーザー側レイアウト（AppBar）、管理側レイアウト（Drawer）＋ 空のプレースホルダーページ。
+5. axios インスタンスと共通レスポンス処理をラップする。
 
-**验收**：`npm run dev` 启动，可在用户端和 `/admin` 之间导航，MUI 样式正常无闪烁。
+**受け入れ基準**：`npm run dev` で起動し、ユーザー側と `/admin` 間を遷移でき、MUI のスタイルがちらつきなく正常に表示されること。
 
-## 阶段二：用户端登录 + 权限体系
+## フェーズ2：ユーザー側ログイン＋権限体系
 
-**目标**：注册、登录、路由守卫可用。
+**目標**：登録、ログイン、ルートガードが利用可能になること。
 
-1. 注册页：用户名/邮箱/密码 + 确认密码，MUI TextField + react-hook-form 校验，调 `POST /api/user/register`。
-2. 登录页：调 `POST /api/user/login`，成功后 token 存 localStorage（key: `user_token`），用户信息存 Zustand。
-3. axios 请求拦截器自动带 `Authorization: Bearer <token>`。
-4. `AuthGuard`：未登录访问受保护页面时重定向到 `/login`，并记录来源路径登录后跳回。
-5. AppBar 展示登录状态、退出登录。
+1. 登録ページ：ユーザー名/メールアドレス/パスワード＋パスワード確認。MUI TextField ＋ react-hook-form でバリデーションし、`POST /api/user/register` を呼び出す。
+2. ログインページ：`POST /api/user/login` を呼び出し、成功時は token を localStorage（キー：`user_token`）に保存し、ユーザー情報を Zustand に保存する。
+3. axios のリクエストインターセプターで自動的に `Authorization: Bearer <token>` を付与する。
+4. `AuthGuard`：未ログイン状態で保護対象ページにアクセスした場合は `/login` にリダイレクトし、遷移元パスを記録してログイン後に元のページへ戻す。
+5. AppBar にログイン状態を表示し、ログアウトできるようにする。
 
-**验收**：注册 → 登录 → 刷新页面登录态保持 → 退出后受保护页面被拦截。
+**受け入れ基準**：登録 → ログイン → ページリロード後もログイン状態が保持される → ログアウト後は保護対象ページへのアクセスが遮断されること。
 
-## 阶段三：文章列表 + 逐句跟读阅读页（含语音播放）
+## フェーズ3：記事一覧＋文単位で読み進める読書ページ（音声再生を含む）
 
-**目标**：学习者可以浏览课程，逐句跟读文章并听音频。
+**目標**：学習者がコースを閲覧し、記事を1文ずつ読みながら音声を聴けること。
 
-1. **列表页** `/articles`
+1. **一覧ページ** `/articles`
    - `GET /api/user/articles?page=&pageSize=&level=&category=`
-   - MUI Card + Grid 卡片式展示（封面图、标题、等级 Chip、分类）。
-   - 顶部筛选：等级（N5–N1）、分类（Select）；MUI Pagination 分页，筛选条件同步到 URL query。
-2. **阅读页** `/articles/[id]`（已接后端真实 API，mock 已删除）
-   - `GET /api/user/articles/{id}` 返回富文本 `content` + 多条 `audios`。
-   - **逐句展示（自动分句）**：前端把富文本按 `。！？` 自动切句（`lib/articleContent.ts` `parseReaderSentences`），每句一个 `SentenceItem`（日语句 + 中文翻译三态）。**后台整段粘贴即可，无需手工分段**。
-   - **中日对照翻译**：后台独立「中文翻译」富文本（`article.translation`），中文同样按 `。！？` 自动分句后与日语句按顺序一一配对（段落数一致时先按段再逐句；不一致时全文逐句顺序配对，中文句多出的并入最后一句）；旧数据兼容正文内嵌中文段。通訳三态：表示（点中文可单独隐藏该句）/ クリックして表示（默认隐藏，显示「（クリックして翻訳を表示する）」占位，点击展开）/ 非表示。
-   - **录入约定**：日文与中文翻译各自整段粘贴，保证两边句子数量按 `。！？` 切分后一致即可逐句对上。
-   - **假名标注 + 词类着色**：前端 kuromoji 分词生成（`lib/furigana.ts`，词典 `public/dict` 约 17MB，`postinstall` 从 node_modules 拷贝，已 gitignore）；「あ カタカナ」按钮全局显隐假名。词类背景色**常显**：名词 `#ffe3bd` 橙 / 动词 `#cdeccd` 绿 / 形容词 `#f9d8e5` 粉 / 外来语（纯片假名）`#c3e7fb` 蓝。
-   - **播放跟随（估算）**：无逐句时间轴，按字符数比例把音频时长分摊到句（`indexAtFraction`/`startFractionOf`）；当前朗读句整句背景高亮 `#dceafe` 并自动滚动居中，点击句子按估算起点跳播；待后端对齐数据就绪后替换为精确同步。
-   - `AudioPlayer` 底部固定播放器：进度条拖动 ±10s、播放/暂停、±30s、七档变速与翻译模式 bottom-sheet、集中听力入口；多条音频以 Chip 切换曲目。
-   - 集中听力模式：全屏单句卡片（进度徽章 n/N，句子按 `。！？` 切分）、2 秒回退、上/下一句（估算跳播）、播放中自动翻页（估算）、文本隐藏盲听。
+   - MUI Card ＋ Grid によるカード表示（カバー画像、タイトル、レベル Chip、カテゴリ）。
+   - 上部の絞り込み：レベル（N5–N1）、カテゴリ（Select）；MUI Pagination でページング、絞り込み条件は URL クエリに同期する。
+2. **読書ページ** `/articles/[id]`（バックエンドの実APIに接続済み、mock は削除済み）
+   - `GET /api/user/articles/{id}` はリッチテキストの `content` ＋ 複数の `audios` を返す。
+   - **文単位表示（自動分文）**：フロント側でリッチテキストを `。！？` により自動的に分文し（`lib/articleContent.ts` の `parseReaderSentences`）、各文を1つの `SentenceItem`（日本語文＋中国語訳の3状態）として表示する。**管理画面では段落単位でそのまま貼り付ければよく、手動での分割は不要**。
+   - **日中対訳**：管理画面で独立した「中国語訳」リッチテキスト（`article.translation`）を入力し、中国語も同様に `。！？` で自動分文した後、日本語の文と順番通りに一対一で対応付ける（段落数が一致する場合は段落単位、その後文単位で対応付け；一致しない場合は全文を文単位で順番に対応付け、余った中国語文は最後の文に結合する）。旧データについては本文中に埋め込まれた中国語段落にも対応する。通訳（翻訳）の3状態：表示（中国語訳をクリックするとその文だけ非表示にできる）／クリックして表示（デフォルトで非表示にし、「（クリックして翻訳を表示する）」というプレースホルダーを表示、クリックで展開）／非表示。
+   - **入力時の約束事**：日本語と中国語訳はそれぞれ段落単位でそのまま貼り付ければよく、両者の文の数が `。！？` で分割した際に一致していれば文単位で対応付けられる。
+   - **振り仮名注記＋品詞着色**：フロント側の kuromoji による分かち書きで生成する（`lib/furigana.ts`、辞書は `public/dict` 内で約17MB、`postinstall` で node_modules からコピーし gitignore 済み）。「あ カタカナ」ボタンで振り仮名の表示/非表示をグローバルに切り替える。品詞の背景色は**常時表示**：名詞 `#ffe3bd` オレンジ／動詞 `#cdeccd` 緑／形容詞 `#f9d8e5` ピンク／外来語（カタカナのみ）`#c3e7fb` 青。
+   - **再生に合わせたハイライト（概算）**：文単位のタイムラインが無いため、文字数の比率で音声の長さを各文に按分する（`indexAtFraction`/`startFractionOf`）。現在読み上げ中の文は文全体の背景を `#dceafe` でハイライトし自動的に画面中央へスクロールする。文をクリックすると概算した開始位置からジャンプ再生する。バックエンドの対応データが揃い次第、正確な同期に置き換える。
+   - `AudioPlayer` の下部固定プレイヤー：進捗バーのドラッグによる ±10秒シーク、再生/一時停止、±30秒シーク、7段階の速度切り替えと翻訳モードの bottom-sheet、集中リスニングへの入口；複数音声は Chip でトラックを切り替える。
+   - 集中リスニングモード：全画面の単文カード（進捗バッジ n/N、文は `。！？` で分割）、2秒巻き戻し、前/次の文（概算ジャンプ再生）、再生中の自動ページ送り（概算）、テキスト非表示での聴き取り練習。
 
-**验收**：筛选+分页正确且刷新后保持；后台发布的文章前台可见、草稿不可见；假名标注/词类着色/段落翻译/变速/集中听力可用；播放时段落背景高亮跟随；音频可播放/暂停、拖动进度、多曲目切换。
+**受け入れ基準**：絞り込み＋ページングが正しく動作しリロード後も保持されること；管理画面で公開した記事がユーザー側で閲覧可能で下書きは非表示であること；振り仮名注記/品詞着色/段落翻訳/速度変更/集中リスニングが利用可能であること；再生時に段落の背景ハイライトが追従すること；音声の再生/一時停止、進捗のドラッグ、複数トラックの切り替えができること。
 
-## 阶段四：后台管理系统
+## フェーズ4：管理システム
 
-**目标**：管理员登录后可管理用户与文章。
+**目標**：管理者がログイン後にユーザーと記事を管理できること。
 
-1. **管理端登录** `/admin/login`：调 `POST /api/admin/login`，token 存 `admin_token`，与用户端完全隔离；管理端 `layout.tsx` 守卫保护所有 `/admin/*` 页面。
-2. **用户管理** `/admin/users`
-   - MUI Table/DataGrid 分页列表（用户名、邮箱、状态、注册时间）。
-   - 新增/编辑（Dialog 表单）、删除（软删除，确认 Dialog）、启用/禁用（Switch）。
-3. **文章管理** `/admin/articles`
-   - 列表：状态筛选（草稿/已发布）、等级/分类筛选、分页。
-   - 新增/编辑页 `/admin/articles/edit/[id]`：
-     - 标题、等级、分类、封面图上传、状态（存草稿/发布）。
-     - wangEditor 富文本正文（`dynamic import` 关闭 SSR 加载）。
-     - 音频上传：调 `POST /api/admin/upload/audio`，返回 URL 关联到文章，支持多条音频、可排序删除。
-   - 删除：软删除，二次确认。
+1. **管理側ログイン** `/admin/login`：`POST /api/admin/login` を呼び出し、token を `admin_token` に保存し、ユーザー側とは完全に分離する；管理側の `layout.tsx` のガードで全ての `/admin/*` ページを保護する。
+2. **ユーザー管理** `/admin/users`
+   - MUI Table/DataGrid によるページング一覧（ユーザー名、メールアドレス、状態、登録日時）。
+   - 新規作成/編集（Dialog フォーム）、削除（ソフトデリート、確認 Dialog）、有効/無効の切り替え（Switch）。
+3. **記事管理** `/admin/articles`
+   - 一覧：状態絞り込み（下書き/公開済み）、レベル/カテゴリ絞り込み、ページング。
+   - 新規作成/編集ページ `/admin/articles/edit/[id]`：
+     - タイトル、レベル、カテゴリ、カバー画像アップロード、状態（下書き保存/公開）。
+     - wangEditor によるリッチテキスト本文（`dynamic import` で SSR 読み込みを無効化）。
+     - 音声アップロード：`POST /api/admin/upload/audio` を呼び出し、返された URL を記事に紐付ける。複数音声のアップロード、並べ替え・削除に対応。
+   - 削除：ソフトデリート、二段階確認。
 
-**验收**：后台增删改查全流程可用；用户端 token 无法访问后台页面和接口；草稿不出现在前台列表。
+**受け入れ基準**：管理画面での CRUD 一連の流れが利用可能であること；ユーザー側の token では管理側のページとAPIにアクセスできないこと；下書きがユーザー側の一覧に表示されないこと。
 
 ---
 
-## 阶段依赖说明
+## フェーズ間の依存関係について
 
-- 阶段一不依赖后端；阶段二起需要后端对应阶段接口就绪。
-- 后端接口未就绪时，可在 `api/` 层临时返回假数据，接口联调时移除。
+- フェーズ1はバックエンドに依存しない；フェーズ2以降は対応するバックエンドのAPIが整っている必要がある。
+- バックエンドのAPIが未整備の場合、`api/` 層で一時的にダミーデータを返すようにし、結合テスト時に取り除く。

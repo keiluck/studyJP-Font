@@ -5,7 +5,7 @@ import { createTheme } from "@mui/material/styles";
 const theme = createTheme({
   palette: {
     primary: {
-      main: "#c2185b", // 和风绯色
+      main: "#c2185b", // 和風の緋色
     },
     secondary: {
       main: "#37474f",

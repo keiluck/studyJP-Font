@@ -43,7 +43,7 @@ export default function RegisterPage() {
         email: values.email,
         password: values.password,
       });
-      // 注册成功后自动登录
+      // 登録成功後、自動的にログインする
       const { token, user } = await login({
         username: values.username,
         password: values.password,
@@ -59,67 +59,67 @@ export default function RegisterPage() {
   return (
     <Paper sx={{ width: "100%", maxWidth: 420, p: 4 }}>
       <Typography variant="h5" gutterBottom>
-        用户注册
+        ユーザー登録
       </Typography>
       <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
         <Stack spacing={2} sx={{ mt: 1 }}>
           {error && <Alert severity="error">{error}</Alert>}
           <TextField
-            label="用户名"
+            label="ユーザー名"
             autoComplete="username"
             autoFocus
             error={!!errors.username}
-            helperText={errors.username?.message || "3-50 个字符"}
+            helperText={errors.username?.message || "3〜50文字"}
             {...field("username", {
-              required: "请输入用户名",
-              minLength: { value: 3, message: "用户名至少 3 个字符" },
-              maxLength: { value: 50, message: "用户名最多 50 个字符" },
+              required: "ユーザー名を入力してください",
+              minLength: { value: 3, message: "ユーザー名は3文字以上で入力してください" },
+              maxLength: { value: 50, message: "ユーザー名は50文字以内で入力してください" },
             })}
           />
           <TextField
-            label="邮箱"
+            label="メールアドレス"
             type="email"
             autoComplete="email"
             error={!!errors.email}
             helperText={errors.email?.message}
             {...field("email", {
-              required: "请输入邮箱",
+              required: "メールアドレスを入力してください",
               pattern: {
                 value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                message: "邮箱格式不正确",
+                message: "メールアドレスの形式が正しくありません",
               },
             })}
           />
           <TextField
-            label="密码"
+            label="パスワード"
             type="password"
             autoComplete="new-password"
             error={!!errors.password}
-            helperText={errors.password?.message || "8-64 个字符"}
+            helperText={errors.password?.message || "8〜64文字"}
             {...field("password", {
-              required: "请输入密码",
-              minLength: { value: 8, message: "密码至少 8 个字符" },
-              maxLength: { value: 64, message: "密码最多 64 个字符" },
+              required: "パスワードを入力してください",
+              minLength: { value: 8, message: "パスワードは8文字以上で入力してください" },
+              maxLength: { value: 64, message: "パスワードは64文字以内で入力してください" },
             })}
           />
           <TextField
-            label="确认密码"
+            label="パスワード確認"
             type="password"
             autoComplete="new-password"
             error={!!errors.confirmPassword}
             helperText={errors.confirmPassword?.message}
             {...field("confirmPassword", {
-              required: "请再次输入密码",
-              validate: (v) => v === watch("password") || "两次输入的密码不一致",
+              required: "パスワードをもう一度入力してください",
+              validate: (v) => v === watch("password") || "入力したパスワードが一致しません",
             })}
           />
           <Button type="submit" variant="contained" size="large" disabled={submitting}>
-            {submitting ? "注册中…" : "注册"}
+            {submitting ? "登録中…" : "登録"}
           </Button>
           <Typography variant="body2" color="text.secondary" align="center">
-            已有账号？{" "}
+            すでにアカウントをお持ちですか？{" "}
             <Typography component={Link} href="/login" variant="body2" color="primary">
-              去登录
+              ログインへ
             </Typography>
           </Typography>
         </Stack>

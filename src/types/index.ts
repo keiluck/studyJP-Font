@@ -1,11 +1,11 @@
-/** 后端统一响应格式，由 axios 拦截器解包，业务代码一般只接触 data */
+/** バックエンド共通レスポンス形式。axios のインターセプターで解包されるため、業務コードは基本的に data のみを扱う */
 export interface ApiResponse<T = unknown> {
   code: number;
   message: string;
   data: T;
 }
 
-/** 分页响应，与后端 PageResult 对齐 */
+/** ページングレスポンス。バックエンドの PageResult に対応 */
 export interface PageResult<T> {
   list: T[];
   total: number;
@@ -13,32 +13,32 @@ export interface PageResult<T> {
   pageSize: number;
 }
 
-/** 分页请求基础参数，page 从 1 开始 */
+/** ページング取得リクエストの基本パラメータ。page は 1 始まり */
 export interface PageQuery {
   page: number;
   pageSize: number;
 }
 
-/** 用户信息（user 表，前台） */
+/** ユーザー情報（user テーブル、フロント側） */
 export interface UserInfo {
   id: number;
   username: string;
   email: string;
-  status: number; // 1=正常 0=禁用
+  status: number; // 1=有効 0=無効
   createdAt: string;
 }
 
-/** 管理员信息（admin_user 表） */
+/** 管理者情報（admin_user テーブル） */
 export interface AdminInfo {
   id: number;
   username: string;
   status: number;
 }
 
-/** 文章等级 */
+/** 記事レベル */
 export type ArticleLevel = "N5" | "N4" | "N3" | "N2" | "N1";
 
-/** 文章列表项（不含正文） */
+/** 記事一覧項目（本文を含まない） */
 export interface ArticleListItem {
   id: number;
   title: string;
@@ -48,41 +48,41 @@ export interface ArticleListItem {
   createdAt: string;
 }
 
-/** 词类（背景着色用）：名词/动词/形容词/外来语（片假名），其余不着色 */
+/** 品詞（背景着色用）：名詞/動詞/形容詞/外来語（カタカナ）。それ以外は着色しない */
 export type WordType = "noun" | "verb" | "adj" | "loan";
 
-/** 分词单元：假名标注（振り仮名）的最小单位 */
+/** 分かち書き単位：振り仮名注記の最小単位 */
 export interface RubyWord {
-  text: string; // 词面（可能含汉字/片假名/英数）
-  ruby?: string; // 振假名读音；纯假名等无需标注的词省略
-  wordType?: WordType; // kuromoji 词性映射，用于背景着色
+  text: string; // 単語表記（漢字・カタカナ・英数字を含む場合あり）
+  ruby?: string; // 振り仮名の読み。仮名のみなど注記不要な語では省略
+  wordType?: WordType; // kuromoji の品詞マッピング。背景着色に使用
 }
 
-/** 句子：跟读的最小单位（时间轴对齐数据待后端提供，当前未使用） */
+/** 文：読み上げの最小単位（タイムライン対応データはバックエンド未提供のため現状未使用） */
 export interface Sentence {
   id: string;
-  text: string; // 日语原文
-  translation: string; // 中文翻译
-  startTime: number; // 在音频中的起始秒
-  endTime: number; // 结束秒
-  rubyWords?: RubyWord[]; // 分词+假名标注；未分词句子为空
+  text: string; // 日本語原文
+  translation: string; // 中国語訳
+  startTime: number; // 音声内の開始秒
+  endTime: number; // 終了秒
+  rubyWords?: RubyWord[]; // 分かち書き＋振り仮名注記。未分割の文では空
 }
 
 /**
- * 文章详情（后端 ArticleDetailResponse）：富文本正文 + 多条音频。
- * 阅读页将 content 解析为逐段展示（lib/articleContent.ts），
- * 假名标注由前端 kuromoji 生成（lib/furigana.ts）；
- * 逐句时间轴（句音同步）待后端对齐数据就绪后启用（Sentence 类型保留）。
+ * 記事詳細（バックエンドの ArticleDetailResponse）：リッチテキスト本文＋複数音声。
+ * 読書ページでは content を段落ごとに解析して表示する（lib/articleContent.ts）。
+ * 振り仮名は kuromoji によりフロント側で生成する（lib/furigana.ts）。
+ * 文単位のタイムライン（音声と文の同期）はバックエンドの対応データが揃い次第有効化する（Sentence 型は将来のために保持）。
  */
 export interface ArticleDetail extends ArticleListItem {
-  content: string; // 日语正文富文本 HTML（后台 wangEditor 录入）
-  translation: string | null; // 中文翻译富文本 HTML，段落顺序与 content 一一对应
-  status: number; // 0=草稿 1=已发布
+  content: string; // 日本語本文のリッチテキスト HTML（管理画面の wangEditor で入力）
+  translation: string | null; // 中国語訳のリッチテキスト HTML。段落順は content と一対一対応
+  status: number; // 0=下書き 1=公開済み
   updatedAt: string;
-  audios: AudioItem[]; // 多条音频，按 sortOrder 升序展示
+  audios: AudioItem[]; // 複数音声。sortOrder の昇順で表示
 }
 
-/** 音频（后端 AudioItem） */
+/** 音声（バックエンドの AudioItem） */
 export interface AudioItem {
   id: number;
   url: string;
@@ -90,46 +90,46 @@ export interface AudioItem {
   sortOrder: number;
 }
 
-/** 登录响应（token + 用户信息） */
+/** ログインレスポンス（token ＋ ユーザー情報） */
 export interface LoginResult<T = UserInfo> {
   token: string;
   user: T;
 }
 
-/** 管理端登录响应（后端 AdminLoginResponse，扁平结构） */
+/** 管理画面のログインレスポンス（バックエンドの AdminLoginResponse、フラット構造） */
 export interface AdminLoginResult {
   token: string;
   id: number;
   username: string;
 }
 
-/** 管理端文章列表项（后端 AdminArticleListItem，含状态与更新时间） */
+/** 管理画面の記事一覧項目（バックエンドの AdminArticleListItem。状態と更新日時を含む） */
 export interface AdminArticleListItem {
   id: number;
   title: string;
   level: ArticleLevel;
   category: string;
   coverUrl: string | null;
-  status: number; // 0=草稿 1=已发布
+  status: number; // 0=下書き 1=公開済み
   createdAt: string;
   updatedAt: string;
 }
 
-/** 管理端文章详情（后端 ArticleDetailResponse，含正文与音频列表） */
+/** 管理画面の記事詳細（バックエンドの ArticleDetailResponse。本文と音声一覧を含む） */
 export interface AdminArticleDetail extends AdminArticleListItem {
-  content: string; // 日语正文富文本 HTML
-  translation: string | null; // 中文翻译富文本 HTML，段落与正文一一对应
+  content: string; // 日本語本文のリッチテキスト HTML
+  translation: string | null; // 中国語訳のリッチテキスト HTML。段落は本文と一対一対応
   audios: AudioItem[];
 }
 
-/** 保存文章请求（后端 ArticleSaveRequest，新增/编辑共用） */
+/** 記事保存リクエスト（バックエンドの ArticleSaveRequest。新規作成・編集共用） */
 export interface ArticleSavePayload {
   title: string;
   content: string;
-  translation: string; // 中文翻译富文本（可空串），段落与正文一一对应
+  translation: string; // 中国語訳のリッチテキスト（空文字可）。段落は本文と一対一対応
   level: string;
   category: string;
   coverUrl: string | null;
-  status: number; // 0=草稿 1=发布
+  status: number; // 0=下書き 1=公開
   audios: { url: string; title: string | null; sortOrder: number }[];
 }

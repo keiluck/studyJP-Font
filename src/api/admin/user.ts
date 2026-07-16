@@ -2,8 +2,8 @@ import adminRequest from "../adminRequest";
 import type { PageQuery, PageResult, UserInfo } from "@/types";
 
 export interface UserQuery extends PageQuery {
-  username?: string; // 用户名模糊搜索
-  status?: number; // 1=正常 0=禁用
+  username?: string; // ユーザー名のあいまい検索
+  status?: number; // 1=有効 0=無効
 }
 
 export interface UserCreatePayload {
@@ -13,7 +13,7 @@ export interface UserCreatePayload {
   status: number;
 }
 
-/** 编辑时密码留空表示不修改 */
+/** 編集時にパスワードを空欄にすると変更しないことを意味する */
 export interface UserUpdatePayload {
   email: string;
   password?: string;

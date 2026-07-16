@@ -2,9 +2,9 @@ import axios, { AxiosRequestConfig } from "axios";
 import type { ApiResponse } from "@/types";
 
 interface HttpOptions {
-  /** localStorage 中的 token key：user_token / admin_token */
+  /** localStorage 内の token キー：user_token / admin_token */
   tokenKey: "user_token" | "admin_token";
-  /** 401 时跳转的登录页 */
+  /** 401 時に遷移するログインページ */
   loginPath: "/login" | "/admin/login";
 }
 
@@ -16,8 +16,8 @@ export interface Http {
 }
 
 /**
- * 创建带 token 注入与统一响应解包的 http 实例。
- * 用户端与管理端各自创建，token 与登录体系完全隔离。
+ * token 注入と共通レスポンスの解包を備えた http インスタンスを作成する。
+ * ユーザー側と管理側はそれぞれ個別に作成し、token とログイン体系は完全に分離される。
  */
 export function createHttp({ tokenKey, loginPath }: HttpOptions): Http {
   const instance = axios.create({
@@ -34,7 +34,7 @@ export function createHttp({ tokenKey, loginPath }: HttpOptions): Http {
 
   const handleUnauthorized = () => {
     localStorage.removeItem(tokenKey);
-    // 已在登录页（如输错密码返回 401）时不重定向，交给表单展示错误
+    // すでにログインページにいる場合（パスワード誤入力で401が返る場合など）はリダイレクトせず、フォーム側でエラー表示に任せる
     if (window.location.pathname === loginPath) return;
     const redirect = encodeURIComponent(
       window.location.pathname + window.location.search
@@ -51,17 +51,17 @@ export function createHttp({ tokenKey, loginPath }: HttpOptions): Http {
       if (body.code === 401) {
         handleUnauthorized();
       }
-      return Promise.reject(new Error(body.message || "请求失败"));
+      return Promise.reject(new Error(body.message || "リクエストに失敗しました"));
     },
     (error) => {
       if (error.response?.status === 401) {
         handleUnauthorized();
         const message =
-          error.response?.data?.message || "登录已过期，请重新登录";
+          error.response?.data?.message || "ログインの有効期限が切れました。再度ログインしてください";
         return Promise.reject(new Error(message));
       }
       const message =
-        error.response?.data?.message || error.message || "网络异常，请稍后重试";
+        error.response?.data?.message || error.message || "ネットワークエラーが発生しました。しばらくしてから再度お試しください";
       return Promise.reject(new Error(message));
     }
   );

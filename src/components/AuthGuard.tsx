@@ -24,8 +24,8 @@ const CONFIG = {
 } as const;
 
 /**
- * 客户端路由守卫，挂在分组 layout 上，用户端/管理端复用。
- * 无 token 访问受保护页面时重定向到对应登录页，并携带来源路径（redirect）供登录后跳回。
+ * クライアント側のルートガード。グループ化された layout に配置し、ユーザー側/管理側で共用する。
+ * token が無い状態で保護対象ページにアクセスした場合、遷移元パス（redirect）を付けて対応するログインページへリダイレクトし、ログイン後に元のページへ戻れるようにする。
  */
 export default function AuthGuard({ role, children }: AuthGuardProps) {
   const pathname = usePathname();

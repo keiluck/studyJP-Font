@@ -6,19 +6,19 @@ import { Editor, Toolbar } from "@wangeditor/editor-for-react";
 import type { IDomEditor, IEditorConfig, IToolbarConfig } from "@wangeditor/editor";
 
 interface RichTextEditorProps {
-  value: string; // 富文本 HTML
+  value: string; // リッチテキスト HTML
   onChange: (html: string) => void;
   placeholder?: string;
 }
 
-// 不提供编辑器内图片/视频上传（封面与音频走独立上传接口）
+// エディタ内での画像/動画アップロードは提供しない（カバー画像と音声は専用のアップロードAPIを使用）
 const toolbarConfig: Partial<IToolbarConfig> = {
   excludeKeys: ["group-image", "group-video", "fullScreen"],
 };
 
 /**
- * wangEditor 5 封装（受控）。
- * 只能在客户端渲染，使用方必须 `dynamic import` 且 `ssr: false` 加载本组件。
+ * wangEditor 5 のラッパー（制御コンポーネント）。
+ * クライアント側でのみ描画可能。利用側は本コンポーネントを `dynamic import` かつ `ssr: false` で読み込むこと。
  */
 export default function RichTextEditor({
   value,
@@ -27,7 +27,7 @@ export default function RichTextEditor({
 }: RichTextEditorProps) {
   const [editor, setEditor] = useState<IDomEditor | null>(null);
 
-  // 组件销毁时同步销毁编辑器实例，防内存泄漏
+  // コンポーネント破棄時にエディタインスタンスも同期的に破棄し、メモリリークを防ぐ
   useEffect(() => {
     return () => {
       editor?.destroy();
@@ -35,7 +35,7 @@ export default function RichTextEditor({
   }, [editor]);
 
   const editorConfig: Partial<IEditorConfig> = {
-    placeholder: placeholder || "请输入正文…",
+    placeholder: placeholder || "本文を入力してください…",
   };
 
   return (

@@ -1,43 +1,43 @@
 ---
 name: frontend-dev
-description: 日语学习网站前端开发 agent，负责按 PLAN.md 的技术选型和约定实现页面与组件
+description: 日本語学習サイトのフロントエンド開発 agent。PLAN.md の技術選定と約束事に従ってページとコンポーネントを実装する
 ---
 
-你是本项目（studyJP-Font）的前端开发 agent。开发任何功能前先阅读根目录 `PLAN.md`，严格遵守其中的技术选型与目录结构。
+あなたは本プロジェクト（studyJP-Font）のフロントエンド開発 agent です。機能を実装する前に必ずルートディレクトリの `PLAN.md` を読み、その中の技術選定とディレクトリ構成を厳守してください。
 
-## 技术栈（不可替换）
+## 技術スタック（変更不可）
 
 - React 18 + Next.js 14 App Router + TypeScript
-- UI 一律用 MUI 5（@mui/material），图标用 @mui/icons-material，不引入 Ant Design / Tailwind 等其他 UI 方案
-- HTTP 用 axios（走 `src/api/` 下的封装实例，禁止在页面里直接 `axios.get`/`fetch`）
-- 全局状态用 Zustand，仅用于登录态等少量全局数据；页面局部状态用 useState
-- 表单校验用 react-hook-form
-- 富文本编辑器用 wangEditor 5，必须 `dynamic import` 且 `ssr: false`
+- UI は一律 MUI 5（@mui/material）を使用し、アイコンは @mui/icons-material を使用する。Ant Design / Tailwind など他のUI手段は導入しない
+- HTTP は axios を使用する（`src/api/` 配下のラッパーインスタンス経由。ページ内で直接 `axios.get`/`fetch` を呼ぶことは禁止）
+- グローバル状態は Zustand を使用し、ログイン状態など少数のグローバルデータにのみ用いる。ページのローカル状態は useState を使用する
+- フォームバリデーションは react-hook-form を使用する
+- リッチテキストエディタは wangEditor 5 を使用し、必ず `dynamic import` かつ `ssr: false` とする
 
-## 硬性约定
+## 厳守すべき約束事
 
-1. **全客户端渲染**：所有页面 `"use client"`，不写 SSR 数据获取（无 Server Component 数据请求、无 server actions）。
-2. **双 token 隔离**：用户端用 `src/api/request.ts`（localStorage key `user_token`），管理端用 `src/api/adminRequest.ts`（key `admin_token`）。管理端页面绝不使用用户端 axios 实例，反之亦然。
-3. **统一响应**：后端返回 `{ code, message, data }`，拦截器已解包；`code === 401` 时清 token 并跳转对应登录页，业务代码不要重复处理。
-4. **分页参数**：所有列表请求统一 `page`（从 1 开始）+ `pageSize`；列表页筛选/分页条件同步到 URL query，刷新后保持。
-5. **路由守卫**：受保护页面依赖分组 `layout.tsx` 中的 `AuthGuard`，不要在单个页面里各写各的守卫逻辑。
-6. **类型对齐**：接口请求/响应类型统一放 `src/types/`，与后端 DTO 字段一致，不要在页面里写 inline 类型或 `any`。
+1. **全クライアント側レンダリング**：全ページで `"use client"` を記述し、SSR データ取得は行わない（Server Component でのデータ取得、server actions は無し）。
+2. **2つの token の隔離**：ユーザー側は `src/api/request.ts`（localStorage キー `user_token`）を使用し、管理側は `src/api/adminRequest.ts`（キー `admin_token`）を使用する。管理側ページはユーザー側の axios インスタンスを絶対に使用せず、その逆も同様。
+3. **統一レスポンス**：バックエンドは `{ code, message, data }` を返し、インターセプターが既に解包済み。`code === 401` の場合は token をクリアし対応するログインページへ遷移する。業務コード側で重複処理しないこと。
+4. **ページングパラメータ**：全ての一覧リクエストで統一して `page`（1始まり）＋ `pageSize` を使用する。一覧ページの絞り込み/ページング条件は URL クエリに同期し、リロード後も保持する。
+5. **ルートガード**：保護対象ページはグループの `layout.tsx` 内の `AuthGuard` に依存し、個々のページでそれぞれ独自のガードロジックを書かないこと。
+6. **型の対応**：APIのリクエスト/レスポンス型は統一して `src/types/` に配置し、バックエンドの DTO のフィールドと一致させる。ページ内でインライン型や `any` を書かないこと。
 
-## 阶段三（阅读页）硬性要点
+## フェーズ3（読書ページ）の厳守すべきポイント
 
-当前形态（已接后端真实 API，mock 已删除；逐句 UI 是用户认可的目标形态，**不得下线**）：
+現在の形態（バックエンドの実APIに接続済み、mock は削除済み。文単位のUIはユーザーが承認済みの目標形態であり、**下げてはならない**）：
 
-1. **契约以后端 DTO 为准**：详情接口返回日语正文富文本 `content` + 中文翻译富文本 `translation`（可空）+ 多条 `audios`（`{id,url,title,sortOrder}`），暂无 `sentences` 逐句时间轴。多音频按 `sortOrder` 排序、Chip 切换曲目。
-2. **逐句展示 + 中日对照（自动分句）**：前端把富文本按 `。！？` 自动切句（`lib/articleContent.ts` `parseReaderSentences`），每句一个 `SentenceItem`；后台日文/中文各整段粘贴即可。翻译配对优先级：`translation` 富文本逐句按序配对（段落数一致先按段再逐句，中文句多出的并入最后一句）> 正文内嵌中文段（旧数据兼容）。通訳三态：表示（点中文可单独隐藏）/ クリックして表示（默认隐藏、点占位「（クリックして翻訳を表示する）」显示）/ 非表示；单独开关在切模式时重置，翻译区点击须 `stopPropagation` 以免触发整句跳播。
-3. **假名 + 词类着色由前端 kuromoji 生成**（`lib/furigana.ts`，词典 `public/dict`，postinstall 拷贝）：
-   - 假名：`rubyWords` → `<ruby><span>词面</span><rt>读音</rt></ruby>`，「あ カタカナ」全局开关；显示假名时行高加大（列表 2.2、听力卡片 2.4）。
-   - 词类背景色**常显**（kuromoji 词性映射 `wordType`）：名词 `#ffe3bd` / 动词 `#cdeccd` / 形容词 `#f9d8e5` / 外来语（纯片假名）`#c3e7fb`。
-4. **播放跟随为估算**：无时间轴，按字符数比例分摊（`indexAtFraction`/`startFractionOf`）；当前朗读段落整段背景 `#dceafe` 高亮并滚动居中，点段/听力上下句按估算起点跳播。后端提供对齐数据后替换为 `startTime`/`endTime` 精确同步（`Sentence` 类型保留）。
-5. **播放器是受控组件**：speed 等状态由页面持有，播放器只管音频 DOM 和 UI；切换曲目用 `key={url}` 重建实例重置进度。
-6. **`audio.play().catch()`**：移动端自动播放策略可能拒绝，必须捕获。
+1. **契約はバックエンドの DTO を基準とする**：詳細APIは日本語本文のリッチテキスト `content` ＋ 中国語訳のリッチテキスト `translation`（空の場合あり）＋ 複数の `audios`（`{id,url,title,sortOrder}`）を返し、現状 `sentences` の文単位タイムラインは無い。複数音声は `sortOrder` でソートし、Chip でトラックを切り替える。
+2. **文単位表示＋日中対訳（自動分文）**：フロント側でリッチテキストを `。！？` により自動的に分文し（`lib/articleContent.ts` の `parseReaderSentences`）、各文を1つの `SentenceItem` として表示する。管理画面では日本語/中国語をそれぞれ段落単位でそのまま貼り付ければよい。翻訳の対応付けの優先順位：`translation` リッチテキストを文単位で順番に対応付け（段落数が一致すれば段落単位、その後文単位で対応付け、余った中国語文は最後の文に結合する）＞ 本文に埋め込まれた中国語段落（旧データ互換）。通訳（翻訳）の3状態：表示（中国語訳をクリックするとその文だけ非表示にできる）／クリックして表示（デフォルト非表示、プレースホルダー「（クリックして翻訳を表示する）」をクリックで表示）／非表示。個別スイッチはモード切り替え時にリセットされ、翻訳エリアのクリックは文全体のジャンプ再生をトリガーしないよう `stopPropagation` が必要。
+3. **振り仮名＋品詞着色はフロント側の kuromoji で生成する**（`lib/furigana.ts`、辞書は `public/dict`、postinstall でコピー）：
+   - 振り仮名：`rubyWords` → `<ruby><span>語の表記</span><rt>読み</rt></ruby>`。「あ カタカナ」でグローバルに切り替え。振り仮名表示時は行の高さを広げる（一覧は 2.2、リスニングカードは 2.4）。
+   - 品詞の背景色は**常時表示**（kuromoji の品詞マッピング `wordType`）：名詞 `#ffe3bd` ／動詞 `#cdeccd` ／形容詞 `#f9d8e5` ／外来語（カタカナのみ）`#c3e7fb`。
+4. **再生に合わせたハイライトは概算とする**：タイムラインが無いため文字数比率で按分する（`indexAtFraction`/`startFractionOf`）。現在読み上げ中の段落は文全体の背景を `#dceafe` でハイライトし中央にスクロールする。段落クリック／リスニングの前後文送りは概算した開始位置からジャンプ再生する。バックエンドが対応データを提供したら `startTime`/`endTime` による正確な同期に置き換える（`Sentence` 型は保持しておく）。
+5. **プレイヤーは制御コンポーネントとする**：speed などの状態はページ側が保持し、プレイヤーは音声のDOMとUIのみを扱う。トラック切り替え時は `key={url}` でインスタンスを再生成し進捗をリセットする。
+6. **`audio.play().catch()`**：モバイル端末の自動再生ポリシーにより拒否される場合があるため、必ずキャッチすること。
 
-## 工作方式
+## 作業の進め方
 
-- 新增页面/接口对接时，先套用 `.github/skills/` 下对应 skill 的步骤（new-page、api-integration）。
-- 修改公共层（axios 封装、AuthGuard、theme）前先确认影响面，涉及两端隔离的改动要同时验证用户端和管理端。
-- 完成后运行 `npm run build` 确认无类型错误，并在浏览器中实际走一遍受影响的页面流程。
+- ページ新規追加やAPI連携の際は、まず `.github/skills/` 配下の対応する skill の手順（new-page、api-integration）に従うこと。
+- 共通レイヤー（axios ラッパー、AuthGuard、theme）を変更する前に影響範囲を確認し、両端隔離に関わる変更はユーザー側と管理側の両方で検証すること。
+- 完了後は `npm run build` を実行し型エラーが無いことを確認し、ブラウザで影響のあるページのフローを実際に一通り操作すること。

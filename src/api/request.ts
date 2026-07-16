@@ -1,6 +1,6 @@
 import { createHttp } from "./createHttp";
 
-/** 用户端 http 实例，携带 user_token，仅用于 /api/user/** 接口 */
+/** ユーザー側の http インスタンス。user_token を保持し、/api/user/** 用のAPIにのみ使用する */
 const request = createHttp({
   tokenKey: "user_token",
   loginPath: "/login",

@@ -30,7 +30,7 @@ import {
 import { uploadAudio, uploadImage } from "@/api/admin/upload";
 import type { ArticleLevel, ArticleSavePayload } from "@/types";
 
-// wangEditor 只能客户端渲染，关闭 SSR 加载
+// wangEditor はクライアント側でのみ描画可能なため、SSR 読み込みを無効化する
 const RichTextEditor = dynamic(() => import("@/components/RichTextEditor"), {
   ssr: false,
   loading: () => (
@@ -43,13 +43,13 @@ const RichTextEditor = dynamic(() => import("@/components/RichTextEditor"), {
 const LEVELS: ArticleLevel[] = ["N5", "N4", "N3", "N2", "N1"];
 const CATEGORIES = ["ニュース", "生活", "文化", "科学"];
 
-/** 编辑中的音频行（未保存前无 id） */
+/** 編集中の音声行（保存前は id を持たない） */
 interface AudioRow {
   url: string;
   title: string;
 }
 
-const EMPTY_HTML = "<p><br></p>"; // wangEditor 空内容
+const EMPTY_HTML = "<p><br></p>"; // wangEditor の空コンテンツ
 
 export default function ArticleEditPage() {
   const params = useParams<{ id?: string[] }>();
@@ -59,13 +59,13 @@ export default function ArticleEditPage() {
   const [loading, setLoading] = useState(!!id);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // 表单状态（字段少且含富文本/文件，直接 useState 受控，不引入 react-hook-form）
+  // フォームの状態（項目数が少なくリッチテキスト/ファイルを含むため、react-hook-form は導入せず useState で直接制御する）
   const [title, setTitle] = useState("");
   const [level, setLevel] = useState<string>("N5");
   const [category, setCategory] = useState<string>(CATEGORIES[0]);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [content, setContent] = useState("");
-  const [translation, setTranslation] = useState(""); // 中文翻译富文本，段落与正文一一对应
+  const [translation, setTranslation] = useState(""); // 中国語訳のリッチテキスト。段落は本文と一対一対応
   const [audios, setAudios] = useState<AudioRow[]>([]);
 
   const [titleError, setTitleError] = useState<string | null>(null);
@@ -95,7 +95,7 @@ export default function ArticleEditPage() {
           .map((a) => ({ url: a.url, title: a.title || "" }))
       );
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "加载失败");
+      setLoadError(err instanceof Error ? err.message : "読み込みに失敗しました");
     } finally {
       setLoading(false);
     }
@@ -120,7 +120,7 @@ export default function ArticleEditPage() {
     setUploadingAudio(true);
     try {
       const url = await uploadAudio(file);
-      // 默认用文件名（去扩展名）作为音频标题，可再编辑
+      // デフォルトではファイル名（拡張子を除く）を音声タイトルとして使用し、後から編集可能にする
       const name = file.name.replace(/\.[^.]+$/, "");
       setAudios((list) => [...list, { url, title: name }]);
     } catch (e) {
@@ -140,10 +140,10 @@ export default function ArticleEditPage() {
     });
   };
 
-  /** 保存（草稿 status=0 / 发布 status=1），上传中禁止提交 */
+  /** 保存する（下書き status=0 / 公開 status=1）。アップロード中は送信を禁止する */
   const handleSave = async (status: number) => {
     if (!title.trim()) {
-      setTitleError("请输入标题");
+      setTitleError("タイトルを入力してください");
       return;
     }
     setTitleError(null);
@@ -185,7 +185,7 @@ export default function ArticleEditPage() {
         severity="error"
         action={
           <Button color="inherit" size="small" onClick={load}>
-            重试
+            再試行
           </Button>
         }
       >
@@ -199,16 +199,16 @@ export default function ArticleEditPage() {
   return (
     <Box sx={{ maxWidth: 920 }}>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-        <IconButton onClick={() => router.push("/admin/articles")} aria-label="返回列表">
+        <IconButton onClick={() => router.push("/admin/articles")} aria-label="一覧に戻る">
           <ArrowBackIcon />
         </IconButton>
-        <Typography variant="h5">{id ? `编辑文章 #${id}` : "新增文章"}</Typography>
+        <Typography variant="h5">{id ? `記事の編集 #${id}` : "新規記事"}</Typography>
       </Stack>
 
       <Paper sx={{ p: 3 }}>
         <Stack spacing={3}>
           <TextField
-            label="标题"
+            label="タイトル"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             error={!!titleError}
@@ -219,7 +219,7 @@ export default function ArticleEditPage() {
           <Stack direction="row" spacing={2}>
             <TextField
               select
-              label="等级"
+              label="レベル"
               value={level}
               onChange={(e) => setLevel(e.target.value)}
               sx={{ width: 140 }}
@@ -232,7 +232,7 @@ export default function ArticleEditPage() {
             </TextField>
             <TextField
               select
-              label="分类"
+              label="カテゴリ"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               sx={{ width: 180 }}
@@ -245,17 +245,17 @@ export default function ArticleEditPage() {
             </TextField>
           </Stack>
 
-          {/* 封面上传 */}
+          {/* カバー画像アップロード */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              封面图（jpg/png/webp，≤5MB）
+              カバー画像（jpg/png/webp、5MB以下）
             </Typography>
             <Stack direction="row" spacing={2} alignItems="center">
               {coverUrl && (
                 <Box
                   component="img"
                   src={coverUrl}
-                  alt="封面预览"
+                  alt="カバー画像プレビュー"
                   sx={{ width: 160, height: 90, objectFit: "cover", borderRadius: 1 }}
                 />
               )}
@@ -265,11 +265,11 @@ export default function ArticleEditPage() {
                 disabled={uploadingCover}
                 onClick={() => coverInputRef.current?.click()}
               >
-                {uploadingCover ? "上传中…" : coverUrl ? "更换封面" : "上传封面"}
+                {uploadingCover ? "アップロード中…" : coverUrl ? "カバー画像を変更" : "カバー画像をアップロード"}
               </Button>
               {coverUrl && (
                 <Button color="error" onClick={() => setCoverUrl(null)}>
-                  移除
+                  削除
                 </Button>
               )}
               <input
@@ -280,32 +280,32 @@ export default function ArticleEditPage() {
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) handleUploadCover(file);
-                  e.target.value = ""; // 允许重选同一文件
+                  e.target.value = ""; // 同じファイルを再選択できるようにする
                 }}
               />
             </Stack>
           </Box>
 
-          {/* 正文富文本 */}
+          {/* 本文のリッチテキスト */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              正文（日语，每段一个段落）
+              本文（日本語、段落ごとに1段落）
             </Typography>
             <RichTextEditor value={content} onChange={setContent} />
           </Box>
 
-          {/* 中文翻译富文本：段落顺序与正文一一对应，阅读页按段配对展示 */}
+          {/* 中国語訳のリッチテキスト：段落順は本文と一対一対応し、読書ページでは段落単位で対応付けて表示する */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              中文翻译（可选，段落顺序与正文一一对应）
+              中国語訳（任意、段落の順序は本文と一対一対応）
             </Typography>
             <RichTextEditor value={translation} onChange={setTranslation} />
           </Box>
 
-          {/* 音频列表：上传多条、可排序删除 */}
+          {/* 音声リスト：複数アップロード可能、並べ替え・削除も可能 */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              音频（mp3/m4a/wav，≤50MB，可多条，按顺序展示）
+              音声（mp3/m4a/wav、50MB以下、複数可、表示順に並び替え可）
             </Typography>
             <List dense disablePadding>
               {audios.map((audio, index) => (
@@ -317,7 +317,7 @@ export default function ArticleEditPage() {
                   <AudiotrackIcon color="action" fontSize="small" />
                   <TextField
                     size="small"
-                    placeholder="音频标题（可选）"
+                    placeholder="音声タイトル（任意）"
                     value={audio.title}
                     onChange={(e) =>
                       setAudios((list) =>
@@ -333,7 +333,7 @@ export default function ArticleEditPage() {
                     size="small"
                     disabled={index === 0}
                     onClick={() => moveAudio(index, -1)}
-                    aria-label="上移"
+                    aria-label="上へ移動"
                   >
                     <ArrowUpwardIcon fontSize="small" />
                   </IconButton>
@@ -341,7 +341,7 @@ export default function ArticleEditPage() {
                     size="small"
                     disabled={index === audios.length - 1}
                     onClick={() => moveAudio(index, 1)}
-                    aria-label="下移"
+                    aria-label="下へ移動"
                   >
                     <ArrowDownwardIcon fontSize="small" />
                   </IconButton>
@@ -349,7 +349,7 @@ export default function ArticleEditPage() {
                     size="small"
                     color="error"
                     onClick={() => setAudios((list) => list.filter((_, i) => i !== index))}
-                    aria-label="删除音频"
+                    aria-label="音声を削除"
                   >
                     <DeleteIcon fontSize="small" />
                   </IconButton>
@@ -363,7 +363,7 @@ export default function ArticleEditPage() {
               onClick={() => audioInputRef.current?.click()}
               sx={{ mt: 1 }}
             >
-              {uploadingAudio ? "上传中…" : "上传音频"}
+              {uploadingAudio ? "アップロード中…" : "音声をアップロード"}
             </Button>
             <input
               ref={audioInputRef}
@@ -380,12 +380,12 @@ export default function ArticleEditPage() {
 
           {/* 保存操作 */}
           <Stack direction="row" spacing={2} justifyContent="flex-end">
-            <Button onClick={() => router.push("/admin/articles")}>取消</Button>
+            <Button onClick={() => router.push("/admin/articles")}>キャンセル</Button>
             <Button variant="outlined" disabled={busy} onClick={() => handleSave(0)}>
-              {saving ? "保存中…" : "存草稿"}
+              {saving ? "保存中…" : "下書き保存"}
             </Button>
             <Button variant="contained" disabled={busy} onClick={() => handleSave(1)}>
-              {saving ? "保存中…" : "保存并发布"}
+              {saving ? "保存中…" : "保存して公開"}
             </Button>
           </Stack>
         </Stack>

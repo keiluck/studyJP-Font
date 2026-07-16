@@ -8,7 +8,7 @@ import type {
 } from "@/types";
 
 export interface AdminArticleQuery extends PageQuery {
-  status?: number; // 0=草稿 1=已发布
+  status?: number; // 0=下書き 1=公開済み
   level?: string;
   category?: string;
 }

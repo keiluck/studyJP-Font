@@ -31,11 +31,11 @@ const formatDate = (createdAt: string) => {
 };
 
 /**
- * 阅读页：后端富文本正文按 。！？ 自动分句展示（假名标注/翻译/集中听力）。
- * - 分句与中文逐句配对规则见 lib/articleContent.ts（admin 整段粘贴即可）；
- * - 假名标注与词类着色由前端 kuromoji 生成，见 lib/furigana.ts；
- * - 后端暂无逐句时间轴，播放高亮/点句跳播按字符数比例估算（lib/articleContent.ts），
- *   待后端对齐数据就绪后替换为精确同步。
+ * 読書ページ：バックエンドから受け取ったリッチテキスト本文を「。！？」で自動分文して表示する（振り仮名注記/翻訳/集中リスニング）。
+ * - 分文と中国語訳の対応付けルールは lib/articleContent.ts を参照（管理画面では段落単位で貼り付けるだけでよい）。
+ * - 振り仮名注記と品詞着色はフロント側の kuromoji で生成する（lib/furigana.ts を参照）。
+ * - バックエンドに文単位のタイムラインがまだ無いため、再生ハイライト/文クリックによるジャンプ再生は文字数比率で概算する（lib/articleContent.ts）。
+ *   バックエンドの対応データが揃い次第、正確な同期に置き換える。
  */
 export default function ArticleReaderPage() {
   const { id } = useParams<{ id: string }>();
@@ -44,15 +44,15 @@ export default function ArticleReaderPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 工具栏状态（页面持有，播放器受控）
+  // ツールバーの状態（ページ側で保持し、プレイヤーを制御する）
   const [showRuby, setShowRuby] = useState(true);
   const [speed, setSpeed] = useState(1.0);
   const [translationMode, setTranslationMode] = useState<TranslationMode>("always");
   const [listeningMode, setListeningMode] = useState(false);
   const [listeningIndex, setListeningIndex] = useState(0);
   const [showText, setShowText] = useState(true);
-  const [audioIndex, setAudioIndex] = useState(0); // 多音频时当前曲目
-  const [activeIndex, setActiveIndex] = useState<number | null>(null); // 当前朗读句（估算）
+  const [audioIndex, setAudioIndex] = useState(0); // 複数音声がある場合の現在のトラック
+  const [activeIndex, setActiveIndex] = useState<number | null>(null); // 現在読み上げ中の文（概算）
 
   const activeRef = useRef<HTMLDivElement | null>(null);
   const listeningModeRef = useRef(listeningMode);
@@ -66,7 +66,7 @@ export default function ArticleReaderPage() {
       setAudioIndex(0);
       setListeningIndex(0);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "加载失败");
+      setError(err instanceof Error ? err.message : "読み込みに失敗しました");
     } finally {
       setLoading(false);
     }
@@ -76,14 +76,14 @@ export default function ArticleReaderPage() {
     load();
   }, [load]);
 
-  // 富文本 → 逐句单元（阅读列表与集中听力共用；翻译已按句配对）
+  // リッチテキスト → 文単位（読書リストと集中リスニングで共用。翻訳は既に文単位で対応付け済み）
   const units = useMemo(
     () => (article ? parseReaderSentences(article.content, article.translation) : []),
     [article]
   );
   const unitTexts = useMemo(() => units.map((u) => u.text), [units]);
 
-  // 假名标注与词类：按句生成；词典加载完成前先显示纯文本
+  // 振り仮名注記と品詞：文単位で生成する。辞書の読み込み完了前はプレーンテキストを表示する
   const [ruby, setRuby] = useState<RubyWord[][] | null>(null);
   useEffect(() => {
     setRuby(null);
@@ -93,13 +93,13 @@ export default function ArticleReaderPage() {
       .then((all) => {
         if (!cancelled) setRuby(all);
       })
-      .catch((err) => console.warn("假名标注生成失败，按纯文本展示", err));
+      .catch((err) => console.warn("振り仮名注記の生成に失敗しました。プレーンテキストで表示します", err));
     return () => {
       cancelled = true;
     };
   }, [unitTexts]);
 
-  // 听力模式锁背景滚动
+  // リスニングモード時は背景のスクロールをロックする
   useEffect(() => {
     document.body.style.overflow = listeningMode ? "hidden" : "";
     return () => {
@@ -107,7 +107,7 @@ export default function ArticleReaderPage() {
     };
   }, [listeningMode]);
 
-  // 播放进度 → 估算当前句并高亮（无时间轴，按字符数比例）
+  // 再生進捗 → 現在の文を概算してハイライトする（タイムラインが無いため文字数比率で計算）
   const handleTimeUpdate = useCallback(
     (currentTime: number) => {
       const audio = document.querySelector("audio");
@@ -121,14 +121,14 @@ export default function ArticleReaderPage() {
     [unitTexts]
   );
 
-  // 高亮句变化时滚到屏幕中央（普通模式）
+  // ハイライトされる文が変わったら画面中央にスクロールする（通常モード）
   useEffect(() => {
     if (!listeningMode && activeRef.current) {
       activeRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [activeIndex, listeningMode]);
 
-  /** 跳到第 idx 句的估算起点并播放（普通模式点句、听力模式上/下一句共用） */
+  /** idx 番目の文の概算開始位置にジャンプして再生する（通常モードの文クリック、リスニングモードの前/次の文で共用） */
   const jumpToUnit = (idx: number) => {
     if (idx < 0 || idx >= unitTexts.length) return;
     setActiveIndex(idx);
@@ -136,7 +136,7 @@ export default function ArticleReaderPage() {
     const audio = document.querySelector("audio");
     if (!audio || !isFinite(audio.duration) || audio.duration <= 0) return;
     audio.currentTime = startFractionOf(unitTexts, idx) * audio.duration;
-    audio.play().catch(console.error); // 移动端自动播放策略可能拒绝
+    audio.play().catch(console.error); // モバイル端末の自動再生ポリシーにより拒否される場合がある
   };
 
   if (loading) {
@@ -152,11 +152,11 @@ export default function ArticleReaderPage() {
         severity="error"
         action={
           <Button color="inherit" size="small" onClick={load}>
-            重试
+            再試行
           </Button>
         }
       >
-        {error || "文章不存在"}
+        {error || "記事が見つかりません"}
       </Alert>
     );
   }
@@ -167,7 +167,7 @@ export default function ArticleReaderPage() {
 
   return (
     <Box sx={{ maxWidth: 720, mx: "auto", pb: currentAudio ? "220px" : 4 }}>
-      {/* 封面 + 标题 + 日期 */}
+      {/* カバー画像＋タイトル＋日付 */}
       {article.coverUrl && (
         <Box
           component="img"
@@ -190,7 +190,7 @@ export default function ArticleReaderPage() {
         </Typography>
       </Stack>
 
-      {/* 多音频时的曲目切换 */}
+      {/* 複数音声がある場合のトラック切り替え */}
       {audios.length > 1 && (
         <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: "wrap", rowGap: 1 }}>
           {audios.map((audio, index) => (
@@ -204,7 +204,7 @@ export default function ArticleReaderPage() {
         </Stack>
       )}
 
-      {/* 句子列表：假名标注 + 词类背景着色 + 逐句翻译；点击句子按估算起点跳播 */}
+      {/* 文リスト：振り仮名注記＋品詞背景着色＋文ごとの翻訳。文をクリックすると概算開始位置からジャンプ再生する */}
       <Box sx={{ bgcolor: "background.paper", borderRadius: 2, overflow: "hidden" }}>
         {units.map((u, idx) => (
           <div key={u.id} ref={activeIndex === idx ? activeRef : null}>
@@ -221,7 +221,7 @@ export default function ArticleReaderPage() {
         ))}
       </Box>
 
-      {/* 集中听力模式：全屏覆盖层（低于播放器、高于 AppBar） */}
+      {/* 集中リスニングモード：全画面オーバーレイ（プレイヤーより下、AppBar より上） */}
       {listeningMode && (
         <Box
           sx={{
@@ -302,12 +302,12 @@ export default function ArticleReaderPage() {
                 ))}
             </Box>
           </Box>
-          {/* 底部给播放器控制栏留空间 */}
+          {/* 下部にプレイヤーの操作バー分のスペースを確保する */}
           <Box sx={{ height: 88 }} />
         </Box>
       )}
 
-      {/* 底部播放器（两模式共用，保持挂载音频不中断）；切换曲目时重建重置进度 */}
+      {/* 下部プレイヤー（両モードで共用し、音声の再生を中断しないようマウントを維持する）。トラック切り替え時は再生成して進捗をリセットする */}
       {currentAudio && (
         <AudioPlayer
           key={currentAudio.url}

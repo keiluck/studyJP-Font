@@ -25,19 +25,19 @@ export type TranslationMode = "always" | "click" | "hidden";
 
 interface AudioPlayerProps {
   src: string;
-  onTimeUpdate?: (currentTime: number) => void; // 每次 timeupdate 上报，驱动句子高亮
+  onTimeUpdate?: (currentTime: number) => void; // timeupdate のたびに通知し、文のハイライトを駆動する
   onPlayingChange?: (isPlaying: boolean) => void;
-  // 工具栏（受控，状态由页面持有）
+  // ツールバー（制御コンポーネント。状態はページ側が保持する）
   speed: number;
   onSpeedChange: (speed: number) => void;
-  // 以下为逐句功能（假名/集中听力/翻译模式），依赖逐句数据；
-  // 未传对应回调时按钮不渲染（后端暂无 sentences 数据时的形态）
-  showRuby?: boolean; // 假名（振り仮名）显隐
+  // 以下は文単位の機能（振り仮名/集中リスニング/翻訳モード）。文単位データに依存する。
+  // 対応するコールバックが渡されない場合はボタンを描画しない（バックエンドに sentences データが無い場合の形態）
+  showRuby?: boolean; // 振り仮名の表示/非表示
   onToggleRuby?: () => void;
-  onOpenListening?: () => void; // 切换集中听力模式
+  onOpenListening?: () => void; // 集中リスニングモードの切り替え
   translationMode?: TranslationMode;
   onTranslationModeChange?: (mode: TranslationMode) => void;
-  // 集中听力模式专用
+  // 集中リスニングモード専用
   isListeningMode?: boolean;
   showText?: boolean;
   onToggleText?: () => void;
@@ -89,7 +89,7 @@ export default function AudioPlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [dragValue, setDragValue] = useState<number | null>(null); // 拖动中只更新显示值
+  const [dragValue, setDragValue] = useState<number | null>(null); // ドラッグ中は表示値のみ更新する
   const [loadError, setLoadError] = useState(false);
   const [speedOpen, setSpeedOpen] = useState(false);
   const [transOpen, setTransOpen] = useState(false);
@@ -130,7 +130,7 @@ export default function AudioPlayer({
     };
   }, [onTimeUpdate, onPlayingChange]);
 
-  // 变速：speed 变化时直接设 playbackRate
+  // 再生速度変更：speed が変化したら playbackRate に直接反映する
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = speed;
   }, [speed]);
@@ -139,7 +139,7 @@ export default function AudioPlayer({
     const audio = audioRef.current;
     if (!audio) return;
     if (isPlaying) audio.pause();
-    else audio.play().catch(console.error); // 移动端自动播放策略可能拒绝
+    else audio.play().catch(console.error); // モバイル端末の自動再生ポリシーにより拒否される場合がある
   };
 
   const seek = (delta: number) => {
@@ -158,7 +158,7 @@ export default function AudioPlayer({
     </IconButton>
   );
 
-  /** 工具栏按钮：图标在上小字在下 */
+  /** ツールバーボタン：アイコンを上、小さいラベルを下に配置 */
   const toolButton = (
     icon: React.ReactNode,
     label: string,
@@ -184,7 +184,7 @@ export default function AudioPlayer({
     </Box>
   );
 
-  /** 底部弹窗（速度/翻译共用样式） */
+  /** 下部ポップアップ（速度/翻訳で共通のスタイルを使用） */
   const bottomSheet = (
     open: boolean,
     onClose: () => void,
@@ -228,7 +228,7 @@ export default function AudioPlayer({
         }}
       >
         {isListeningMode ? (
-          /* 集中听力模式：单行控制栏 */
+          /* 集中リスニングモード：1行の操作バー */
           <Box
             sx={{
               display: "flex",
@@ -267,11 +267,11 @@ export default function AudioPlayer({
             </IconButton>
           </Box>
         ) : (
-          /* 普通模式：进度条行 + 播放控制行 + 工具栏行 */
+          /* 通常モード：進捗バー行＋再生操作行＋ツールバー行 */
           <>
             {loadError ? (
               <Typography color="error" align="center" sx={{ py: 1 }}>
-                音频加载失败
+                音声の読み込みに失敗しました
               </Typography>
             ) : (
               <Box sx={{ display: "flex", alignItems: "center", gap: 2, px: 2, pt: 1 }}>

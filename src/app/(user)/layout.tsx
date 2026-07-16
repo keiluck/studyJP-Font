@@ -22,11 +22,11 @@ export default function UserLayout({
   const router = useRouter();
   const { user, clear, setUser } = useUserAuth();
 
-  // 登录态来自 localStorage（仅客户端），挂载后再渲染相关 UI，避免 SSR hydration 不一致
+  // ログイン状態は localStorage（クライアント側のみ）から取得するため、マウント後に関連 UI を描画し SSR ハイドレーションの不一致を防ぐ
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  // 挂载时用 token 换最新用户信息；token 失效时拦截器会清 token 并跳登录页
+  // マウント時に token を使って最新のユーザー情報を取得。token が無効な場合はインターセプターが token をクリアしてログインページへ遷移する
   useEffect(() => {
     if (localStorage.getItem("user_token")) {
       fetchMe().then(setUser).catch(() => {});
@@ -50,10 +50,10 @@ export default function UserLayout({
             href="/articles"
             sx={{ color: "inherit", textDecoration: "none" }}
           >
-            日语学习
+            日本語学習
           </Typography>
           <Button color="inherit" component={Link} href="/articles" sx={{ ml: 3 }}>
-            课程
+            コース
           </Button>
           <Box sx={{ flexGrow: 1 }} />
           {mounted &&
@@ -63,16 +63,16 @@ export default function UserLayout({
                   {user.username}
                 </Typography>
                 <Button color="inherit" onClick={handleLogout}>
-                  退出
+                  ログアウト
                 </Button>
               </>
             ) : (
               <>
                 <Button color="inherit" component={Link} href="/login">
-                  登录
+                  ログイン
                 </Button>
                 <Button color="inherit" component={Link} href="/register">
-                  注册
+                  新規登録
                 </Button>
               </>
             ))}

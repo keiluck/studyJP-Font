@@ -1,51 +1,51 @@
 ---
 name: new-page
-description: 在本项目中新增一个页面（用户端或管理端）的标准步骤，含路由位置、守卫、布局约定
+description: 本プロジェクトでページ（ユーザー側または管理側）を新規追加する際の標準手順。ルート配置、ガード、レイアウトの約束事を含む
 ---
 
-# 新增页面
+# ページの新規追加
 
-## 1. 确定页面归属，放到正确的路由分组
+## 1. ページの所属を決め、正しいルートグループに配置する
 
-- 用户端页面 → `src/app/(user)/<路径>/page.tsx`（自动获得 AppBar 布局 + 用户守卫）
-- 用户端登录/注册 → `src/app/(auth)/<路径>/page.tsx`（独立全屏居中布局，不套网站框架，与后台登录形态一致）
-- 管理端页面 → `src/app/admin/<路径>/page.tsx`（自动获得 Drawer 布局 + 管理守卫；`/admin/login` 由 admin/layout 按路径跳过框架）
-- 动态路由用 `[id]`，可选 catch-all 用 `[[...id]]`（如新增/编辑复用一个页面）
+- ユーザー側ページ → `src/app/(user)/<パス>/page.tsx`（自動的に AppBar レイアウト＋ユーザーガードが適用される）
+- ユーザー側ログイン/登録 → `src/app/(auth)/<パス>/page.tsx`（独立した全画面中央表示レイアウトで、サイト共通フレームは使用せず、管理側ログインと同じ形態）
+- 管理側ページ → `src/app/admin/<パス>/page.tsx`（自動的に Drawer レイアウト＋管理ガードが適用される；`/admin/login` は admin/layout がパスによりフレームをスキップする）
+- 動的ルートは `[id]` を使用し、任意の catch-all は `[[...id]]` を使用する（新規作成/編集で1つのページを共用する場合など）
 
-不要在 `app/` 根下新建游离页面。
+`app/` 直下に孤立したページを新規作成しないこと。
 
-## 2. 页面模板
+## 2. ページテンプレート
 
 ```tsx
 "use client";
 
 import { useState, useEffect } from "react";
-// MUI 组件按需引入；接口调用引 src/api/ 下的封装函数
+// MUI コンポーネントは必要な分だけインポートする。API呼び出しは src/api/ 配下のラッパー関数を使用する
 
 export default function XxxPage() {
-  // 局部状态用 useState；登录态从 store/userAuth 或 store/adminAuth 读取
-  return <>{/* MUI 布局 */}</>;
+  // ローカル状態は useState を使用する。ログイン状態は store/userAuth または store/adminAuth から読み取る
+  return <>{/* MUI レイアウト */}</>;
 }
 ```
 
 要点：
 
-- 首行必须 `"use client"`，本项目不写 SSR 数据获取。
-- 列表页：筛选与分页条件用 `useSearchParams` 读、`router.replace` 写，保证刷新后状态保持；分页参数统一 `page`（从 1 开始）+ `pageSize`。
-- 必须处理三种状态：loading（Skeleton/CircularProgress）、空数据、请求失败（Snackbar/Alert）。
+- 先頭行に必ず `"use client"` を書くこと。本プロジェクトでは SSR データ取得を行わない。
+- 一覧ページ：絞り込みとページング条件は `useSearchParams` で読み取り、`router.replace` で書き込む。リロード後も状態が保持されるようにする。ページングパラメータは統一して `page`（1始まり）＋ `pageSize` とする。
+- 3つの状態を必ず処理すること：loading（Skeleton/CircularProgress）、空データ、リクエスト失敗（Snackbar/Alert）。
 
-## 3. 接口与类型
+## 3. APIと型
 
-- 不在页面里直接 axios/fetch，先在 `src/api/` 对应模块加函数（见 skill: api-integration）。
-- 请求/响应类型定义在 `src/types/`，与后端 DTO 字段一致。
+- ページ内で直接 axios/fetch を呼ばず、先に `src/api/` の対応するモジュールに関数を追加すること（skill: api-integration を参照）。
+- リクエスト/レスポンスの型は `src/types/` に定義し、バックエンドの DTO のフィールドと一致させること。
 
-## 4. 导航入口
+## 4. ナビゲーション入口
 
-- 用户端：在 `(user)/layout.tsx` 的 AppBar 中加入口。
-- 管理端：在 `admin/layout.tsx` 的 Drawer 菜单中加入口。
+- ユーザー側：`(user)/layout.tsx` の AppBar に入口を追加する。
+- 管理側：`admin/layout.tsx` の Drawer メニューに入口を追加する。
 
-## 5. 自检
+## 5. セルフチェック
 
-- `npm run build` 无类型错误。
-- 未登录直接访问该 URL 会被守卫重定向到对应登录页（登录/注册页除外）。
-- 浏览器实际走一遍页面主流程。
+- `npm run build` で型エラーが無いこと。
+- 未ログイン状態でそのURLに直接アクセスするとガードにより対応するログインページへリダイレクトされること（ログイン/登録ページを除く）。
+- ブラウザで実際にページの主要フローを一通り操作すること。

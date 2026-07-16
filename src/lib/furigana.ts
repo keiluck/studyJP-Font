@@ -1,9 +1,9 @@
 import type { RubyWord, WordType } from "@/types";
 
 /**
- * 浏览器端假名（振り仮名）自动标注：kuromoji 分词 + 读音转平假名。
- * 词典（public/dict，约 17MB gzip 分片）首次调用时异步加载，全局只初始化一次。
- * 后端暂无逐句标注数据，先由前端生成；后续后端提供 rubyWords 时可直接替换。
+ * ブラウザ側での振り仮名自動注記：kuromoji による分かち書き＋読みの平仮名変換。
+ * 辞書（public/dict、gzip 分割で約17MB）は初回呼び出し時に非同期で読み込み、グローバルで一度だけ初期化する。
+ * バックエンドに文単位の注記データがまだ無いため、まずフロント側で生成する。将来バックエンドが rubyWords を提供する際にそのまま置き換え可能。
  */
 
 type Tokenizer = import("kuromoji").Tokenizer;
@@ -21,7 +21,7 @@ function getTokenizer(): Promise<Tokenizer> {
           });
         })
     );
-    // 失败时清掉缓存，下次调用可重试（如网络抖动导致词典分片下载失败）
+    // 失敗時はキャッシュをクリアし、次回呼び出しでリトライ可能にする（ネットワーク不調で辞書分割ファイルのダウンロードが失敗した場合など）
     tokenizerPromise.catch(() => {
       tokenizerPromise = null;
     });
@@ -30,13 +30,13 @@ function getTokenizer(): Promise<Tokenizer> {
 }
 
 const KANJI_RE = /\p{Script=Han}/u;
-const KATAKANA_ONLY_RE = /^[ァ-ヶーｦ-ﾟ・\s]+$/; // 纯片假名词面 → 外来语
+const KATAKANA_ONLY_RE = /^[ァ-ヶーｦ-ﾟ・\s]+$/; // カタカナのみの語 → 外来語
 
-/** 片假名 → 平假名（读音展示用） */
+/** カタカナ → ひらがな（読み表示用） */
 const kataToHira = (s: string) =>
   s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
 
-/** kuromoji 词性 → 着色词类；外来语（纯片假名）优先于词性判定 */
+/** kuromoji の品詞 → 着色用の品詞分類。外来語（カタカナのみ）の判定を品詞判定より優先する */
 function classifyWord(surface: string, pos: string): WordType | undefined {
   if (KATAKANA_ONLY_RE.test(surface)) return "loan";
   if (pos === "動詞") return "verb";
@@ -45,7 +45,7 @@ function classifyWord(surface: string, pos: string): WordType | undefined {
   return undefined;
 }
 
-/** 对一批文本分词并生成假名标注与词类；仅含汉字的词标注 ruby */
+/** 複数のテキストをまとめて分かち書きし、振り仮名注記と品詞を生成する。漢字を含む語にのみ ruby を付与する */
 export async function annotateTexts(texts: string[]): Promise<RubyWord[][]> {
   const tokenizer = await getTokenizer();
   return texts.map((text) =>

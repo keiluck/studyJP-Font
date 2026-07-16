@@ -3,8 +3,8 @@ import { AppRouterCacheProvider } from "@mui/material-nextjs/v14-appRouter";
 import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
-  title: "日语学习",
-  description: "日语学习网站",
+  title: "日本語学習",
+  description: "日本語学習サイト",
 };
 
 export default function RootLayout({
@@ -13,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN">
+    <html lang="ja">
       <body>
         <AppRouterCacheProvider>
           <Providers>{children}</Providers>

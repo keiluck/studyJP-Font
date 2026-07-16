@@ -1,46 +1,46 @@
 ---
 name: mobile-home-list
-description: 移动端前台首页——文章列表页。加载文章列表，展示标题+首行摘要，点击进入阅读页；含 loading 转圈、错误重试、空态三种状态。
+description: モバイル端利用者側のホームページ——記事一覧ページ。記事一覧を読み込み、タイトル＋先頭行の要約を表示し、クリックで読書ページへ遷移する。loading のぐるぐる表示、エラー時のリトライ、空状態の3つの状態を含む。
 ---
 
-# 前台首页：文章列表
+# 利用者側ホームページ：記事一覧
 
-来源：`src/pages/Mobile/HomePage/MobileHomePage.tsx`（约 96 行，单文件组件）
+抽出元：`src/pages/Mobile/HomePage/MobileHomePage.tsx`（約96行、単一ファイルのコンポーネント）
 
-## 功能需求
+## 機能要件
 
-1. 进入页面自动请求 `GET /api/articles`，展示文章列表。
-2. 三态渲染：
-   - **加载中**：全屏居中转圈 spinner + 「加载中...」
-   - **错误**：全屏居中 ❌ 错误消息 + 「重新加载」按钮（`window.location.reload()`）
-   - **空列表**：居中灰字「暂无文章」
-3. 顶部吸顶 header：应用标题（如「日语跟读学习」）+ 副标题「N 篇文章」。
-4. 列表项（每篇文章一行）：
-   - 左：44×44 圆角图标块（🎧 emoji 占位，可换封面图）
-   - 中：标题（16px 粗体，单行省略）+ 内容首行摘要（13px 灰色，单行省略）
-   - 右：`›` 箭头
-   - 点击整行 → `navigate('/m/japanese/all/article/${id}')` 进入阅读页
-5. 移动端优先：白底、细分割线（#f5f5f5）、无 hover 依赖。
+1. ページに入ると自動的に `GET /api/articles` をリクエストし、記事一覧を表示する。
+2. 3状態の描画：
+   - **読み込み中**：全画面中央にぐるぐる回る spinner ＋「読み込み中...」
+   - **エラー**：全画面中央に ❌ エラーメッセージ＋「再読み込み」ボタン（`window.location.reload()`）
+   - **空一覧**：中央にグレー文字で「記事がありません」
+3. 上部固定の header：アプリタイトル（例：「日本語シャドーイング学習」）＋サブタイトル「N 件の記事」。
+4. 一覧項目（記事1件につき1行）：
+   - 左：44×44 の角丸アイコンブロック（🎧 絵文字のプレースホルダー、カバー画像に差し替え可）
+   - 中：タイトル（16px 太字、1行で省略）＋本文先頭行の要約（13px グレー、1行で省略）
+   - 右：`›` の矢印
+   - 行全体をクリック → `navigate('/m/japanese/all/article/${id}')` で読書ページへ遷移
+5. モバイルファースト：白背景、細い区切り線（#f5f5f5）、hover に依存しない。
 
-## 关键实现要点
+## 実装の要点
 
-- 数据加载遵循 [[data-model-and-api]] 的 loading/error 状态机。
-- 吸顶 header：`position: sticky; top: 0; zIndex: 10; borderBottom: 1px solid #f0f0f0`。
-- 单行省略三件套：`overflow: hidden; textOverflow: ellipsis; whiteSpace: nowrap`，
-  且中间列容器要 `flex: 1; minWidth: 0`（否则 flex 子项不收缩、省略号失效）。
-- spinner 用纯 CSS：
+- データ読み込みは [[data-model-and-api]] の loading/error ステートマシンに従う。
+- 固定 header：`position: sticky; top: 0; zIndex: 10; borderBottom: 1px solid #f0f0f0`。
+- 1行省略の三点セット：`overflow: hidden; textOverflow: ellipsis; whiteSpace: nowrap`、
+  かつ中央列のコンテナには `flex: 1; minWidth: 0` が必要（無いと flex の子要素が縮まず省略記号が効かない）。
+- spinner は純粋な CSS で実装する：
   ```tsx
   <div style={{ width: 36, height: 36, border: '3px solid #eee',
     borderTopColor: '#333', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
   <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
   ```
 
-## 视觉规格
+## ビジュアル仕様
 
-| 元素 | 值 |
+| 要素 | 値 |
 |------|-----|
-| 主色（标题文字） | #1a1a2e |
-| 次要文字 | #999 / #aaa |
-| 分割线 | #f0f0f0（header）/ #f5f5f5（列表项） |
-| 标题字号 | header 22px / 列表项 16px |
-| 列表项内边距 | 16px |
+| 主色（タイトル文字） | #1a1a2e |
+| 補助文字 | #999 / #aaa |
+| 区切り線 | #f0f0f0（header）/ #f5f5f5（一覧項目） |
+| タイトル文字サイズ | header 22px / 一覧項目 16px |
+| 一覧項目の内側余白 | 16px |

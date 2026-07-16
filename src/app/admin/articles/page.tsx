@@ -43,7 +43,7 @@ function ArticleManage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // 筛选与分页条件以 URL query 为准，刷新后保持
+  // 絞り込み条件とページング条件は URL クエリを基準とし、リロード後も保持される
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
   const status = searchParams.get("status") || "";
   const level = searchParams.get("level") || "";
@@ -69,7 +69,7 @@ function ArticleManage() {
         })
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "加载失败");
+      setError(err instanceof Error ? err.message : "読み込みに失敗しました");
     } finally {
       setLoading(false);
     }
@@ -79,7 +79,7 @@ function ArticleManage() {
     load();
   }, [load]);
 
-  /** 更新 URL query（筛选变化时重置到第 1 页） */
+  /** URL クエリを更新する（絞り込み条件変更時は1ページ目にリセット） */
   const updateQuery = (patch: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString());
     Object.entries(patch).forEach(([k, v]) => {
@@ -93,9 +93,9 @@ function ArticleManage() {
     if (!deleting) return;
     try {
       await deleteArticle(deleting.id);
-      setToast("文章已删除");
+      setToast("記事を削除しました");
       setDeleting(null);
-      await load(); // 删除影响分页总数，重拉
+      await load(); // 削除により総ページ数が変わるため再取得する
     } catch (e) {
       setToast((e as Error).message);
       setDeleting(null);
@@ -119,7 +119,7 @@ function ArticleManage() {
       onChange={(e) => updateQuery({ [key]: e.target.value, page: "" })}
       sx={{ width: 130 }}
     >
-      <MenuItem value="">全部</MenuItem>
+      <MenuItem value="">すべて</MenuItem>
       {options.map((o) => (
         <MenuItem key={o.value} value={o.value}>
           {o.label}
@@ -132,7 +132,7 @@ function ArticleManage() {
     <Box>
       <Stack direction="row" alignItems="center" sx={{ mb: 2 }} spacing={2}>
         <Typography variant="h5" sx={{ flexGrow: 1 }}>
-          文章管理
+          記事管理
         </Typography>
         <Button
           variant="contained"
@@ -140,24 +140,24 @@ function ArticleManage() {
           component={Link}
           href="/admin/articles/edit"
         >
-          新增文章
+          新規記事
         </Button>
       </Stack>
 
-      {/* 筛选：状态 / 等级 / 分类 */}
+      {/* 絞り込み：状態 / レベル / カテゴリ */}
       <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-        {filterSelect("状态", status, "status", [
-          { value: "1", label: "已发布" },
-          { value: "0", label: "草稿" },
+        {filterSelect("状態", status, "status", [
+          { value: "1", label: "公開済み" },
+          { value: "0", label: "下書き" },
         ])}
         {filterSelect(
-          "等级",
+          "レベル",
           level,
           "level",
           LEVELS.map((l) => ({ value: l, label: l }))
         )}
         {filterSelect(
-          "分类",
+          "カテゴリ",
           category,
           "category",
           CATEGORIES.map((c) => ({ value: c, label: c }))
@@ -173,7 +173,7 @@ function ArticleManage() {
           severity="error"
           action={
             <Button color="inherit" size="small" onClick={load}>
-              重试
+              再試行
             </Button>
           }
         >
@@ -186,12 +186,12 @@ function ArticleManage() {
               <TableHead>
                 <TableRow>
                   <TableCell>ID</TableCell>
-                  <TableCell>封面</TableCell>
-                  <TableCell>标题</TableCell>
-                  <TableCell>等级</TableCell>
-                  <TableCell>分类</TableCell>
-                  <TableCell>状态</TableCell>
-                  <TableCell>更新时间</TableCell>
+                  <TableCell>カバー画像</TableCell>
+                  <TableCell>タイトル</TableCell>
+                  <TableCell>レベル</TableCell>
+                  <TableCell>カテゴリ</TableCell>
+                  <TableCell>状態</TableCell>
+                  <TableCell>更新日時</TableCell>
                   <TableCell align="right">操作</TableCell>
                 </TableRow>
               </TableHead>
@@ -221,7 +221,7 @@ function ArticleManage() {
                     <TableCell>
                       <Chip
                         size="small"
-                        label={article.status === 1 ? "已发布" : "草稿"}
+                        label={article.status === 1 ? "公開済み" : "下書き"}
                         color={article.status === 1 ? "success" : "default"}
                       />
                     </TableCell>
@@ -233,7 +233,7 @@ function ArticleManage() {
                         component={Link}
                         href={`/admin/articles/edit/${article.id}`}
                       >
-                        编辑
+                        編集
                       </Button>
                       <Button
                         size="small"
@@ -241,7 +241,7 @@ function ArticleManage() {
                         startIcon={<DeleteIcon />}
                         onClick={() => setDeleting(article)}
                       >
-                        删除
+                        削除
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -249,7 +249,7 @@ function ArticleManage() {
                 {result?.list.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={8} align="center" sx={{ color: "text.secondary", py: 4 }}>
-                      暂无文章
+                      記事がありません
                     </TableCell>
                   </TableRow>
                 )}
@@ -268,18 +268,18 @@ function ArticleManage() {
         </>
       )}
 
-      {/* 删除二次确认 */}
+      {/* 削除の再確認 */}
       <Dialog open={!!deleting} onClose={() => setDeleting(null)}>
-        <DialogTitle>删除文章</DialogTitle>
+        <DialogTitle>記事の削除</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            确定删除文章「{deleting?.title}」吗？（软删除，前台立即不可见）
+            記事「{deleting?.title}」を削除してもよろしいですか？（論理削除のため、削除後は即座に一般公開ページから見えなくなります）
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleting(null)}>取消</Button>
+          <Button onClick={() => setDeleting(null)}>キャンセル</Button>
           <Button color="error" variant="contained" onClick={handleDelete}>
-            删除
+            削除
           </Button>
         </DialogActions>
       </Dialog>

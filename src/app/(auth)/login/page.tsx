@@ -35,7 +35,7 @@ function LoginForm() {
       const { token, user } = await login(values);
       setAuth(token, user);
       const redirect = searchParams.get("redirect");
-      // 只允许站内路径，防开放重定向
+      // サイト内パスのみ許可し、オープンリダイレクトを防止する
       router.replace(redirect?.startsWith("/") ? redirect : "/articles");
     } catch (e) {
       setError((e as Error).message);
@@ -46,34 +46,34 @@ function LoginForm() {
   return (
     <Paper sx={{ width: "100%", maxWidth: 420, p: 4 }}>
       <Typography variant="h5" gutterBottom>
-        用户登录
+        ログイン
       </Typography>
       <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
         <Stack spacing={2} sx={{ mt: 1 }}>
           {error && <Alert severity="error">{error}</Alert>}
           <TextField
-            label="用户名"
+            label="ユーザー名"
             autoComplete="username"
             autoFocus
             error={!!errors.username}
             helperText={errors.username?.message}
-            {...field("username", { required: "请输入用户名" })}
+            {...field("username", { required: "ユーザー名を入力してください" })}
           />
           <TextField
-            label="密码"
+            label="パスワード"
             type="password"
             autoComplete="current-password"
             error={!!errors.password}
             helperText={errors.password?.message}
-            {...field("password", { required: "请输入密码" })}
+            {...field("password", { required: "パスワードを入力してください" })}
           />
           <Button type="submit" variant="contained" size="large" disabled={submitting}>
-            {submitting ? "登录中…" : "登录"}
+            {submitting ? "ログイン中…" : "ログイン"}
           </Button>
           <Typography variant="body2" color="text.secondary" align="center">
-            还没有账号？{" "}
+            アカウントをお持ちでない方は{" "}
             <Typography component={Link} href="/register" variant="body2" color="primary">
-              去注册
+              新規登録へ
             </Typography>
           </Typography>
         </Stack>

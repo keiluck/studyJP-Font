@@ -11,14 +11,14 @@ export interface ArticleQuery extends PageQuery {
   category?: string;
 }
 
-/** 文章列表（分页 + 等级/分类筛选） */
+/** 記事一覧（ページング＋レベル/カテゴリ絞り込み） */
 export function fetchArticles(
   params: ArticleQuery
 ): Promise<PageResult<ArticleListItem>> {
   return request.get("/api/user/articles", { params });
 }
 
-/** 文章详情（富文本正文 + 音频列表） */
+/** 記事詳細（リッチテキスト本文＋音声一覧） */
 export function fetchArticleDetail(id: number): Promise<ArticleDetail> {
   return request.get(`/api/user/articles/${id}`);
 }

@@ -12,17 +12,17 @@ export interface LoginParams {
   password: string;
 }
 
-/** 注册，成功返回用户信息（不含 token，注册后需登录） */
+/** 登録する。成功時はユーザー情報を返す（token は含まれないため、登録後は別途ログインが必要） */
 export function register(params: RegisterParams) {
   return request.post<UserInfo>("/api/user/register", params);
 }
 
-/** 登录，返回 token + 用户信息 */
+/** ログインする。token ＋ ユーザー情報を返す */
 export function login(params: LoginParams) {
   return request.post<LoginResult>("/api/user/login", params);
 }
 
-/** token 换当前用户信息，供刷新登录态 */
+/** token から現在のユーザー情報を取得する。ログイン状態の更新に使用 */
 export function fetchMe() {
   return request.get<UserInfo>("/api/user/me");
 }

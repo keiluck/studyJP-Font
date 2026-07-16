@@ -1,48 +1,48 @@
 ---
 name: mobile-reader-page
-description: 移动端前台阅读页——逐句跟读页。逐句渲染（假名标注 + 高亮句背景标注）、底部固定播放器（变速/假名开关/翻译模式/集中听力）、播放高亮跟随。
+description: モバイル端利用者側の読書ページ——文単位でシャドーイングするページ。文単位の描画（振り仮名注記＋ハイライト文の背景着色）、下部固定プレイヤー（速度変更/振り仮名切り替え/翻訳モード/集中リスニング）、再生ハイライトの追従。
 ---
 
-# 前台阅读页：逐句跟读（含假名与背景标注）
+# 利用者側読書ページ：文単位シャドーイング（振り仮名と背景着色を含む）
 
-来源：`src/pages/Mobile/ReaderPage/MobileReaderPage.tsx` + `src/components/Mobile/SentenceItem/MobileSentenceItem.tsx` + `src/components/Mobile/AudioPlayer/MobileAudioPlayer.tsx`
+抽出元：`src/pages/Mobile/ReaderPage/MobileReaderPage.tsx` + `src/components/Mobile/SentenceItem/MobileSentenceItem.tsx` + `src/components/Mobile/AudioPlayer/MobileAudioPlayer.tsx`
 
-## 功能需求
+## 機能要件
 
-1. 进入页面请求 `GET /api/articles/:id`，封面图 + 标题 + 日期（`ja-JP` locale）+ 逐句列表。
-2. **逐句渲染**（SentenceItem）：日语原文 + 中文翻译，翻译三态（always / click / hidden）。
-3. **假名标注（振り仮名）**：
-   - 句子带 `rubyWords`（见 [[data-model-and-api]]）时逐词渲染：`w.ruby && showRuby` 用 `<ruby><span>{w.text}</span><rt>{w.ruby}</rt></ruby>`，否则 `<span>{w.text}</span>`；
-   - `showRuby` 全局开关由页面持有，经播放器工具栏「あ カタカナ」按钮切换（关闭时按钮灰色 + 删除线）；
-   - `rubyWords` 为空（未分词）整句降级渲染 `text`。
-4. **背景标注（词类着色）**：仅当前播放句（isActive）内着色，逐词按类型：
+1. ページに入ると `GET /api/articles/:id` をリクエストし、カバー画像＋タイトル＋日付（`ja-JP` locale）＋文単位の一覧を表示する。
+2. **文単位の描画**（SentenceItem）：日本語原文＋中国語訳、翻訳の3状態（always / click / hidden）。
+3. **振り仮名注記**：
+   - 文に `rubyWords`（[[data-model-and-api]] を参照）がある場合は語ごとに描画する：`w.ruby && showRuby` の場合は `<ruby><span>{w.text}</span><rt>{w.ruby}</rt></ruby>`、それ以外は `<span>{w.text}</span>`；
+   - `showRuby` のグローバルスイッチはページ側が保持し、プレイヤーのツールバーにある「あ カタカナ」ボタンで切り替える（オフの時はボタンがグレー＋取り消し線になる）；
+   - `rubyWords` が空（未分割）の場合は文全体を `text` としてそのまま描画する。
+4. **背景着色（品詞着色）**：現在再生中の文（isActive）内のみ着色し、語ごとに種類分けする：
    ```ts
    const typeColor = { han: '#ffb74d', katakana: '#4fc3f7', en: '#aed581', other: 'transparent' }
    const getWordType = (text: string) => {
-     if (/\p{Script=Han}/u.test(text)) return 'han'        // 汉字：橙
-     if (/[゠-ヿ]/.test(text)) return 'katakana'   // 片假名：蓝
-     if (/[A-Za-z0-9]/.test(text)) return 'en'             // 英数：绿
+     if (/\p{Script=Han}/u.test(text)) return 'han'        // 漢字：オレンジ
+     if (/[゠-ヿ]/.test(text)) return 'katakana'   // カタカナ：青
+     if (/[A-Za-z0-9]/.test(text)) return 'en'             // 英数字：緑
      return 'other'
    }
    ```
-   词块样式 `borderRadius: 4; padding: 1px 4px; display: inline-block`。
-5. **播放高亮跟随**：`timeupdate` 按 `startTime`/`endTime` 找到当前时间所在句 → 高亮（浅蓝底 `#f0f7ff`）并 `scrollIntoView({ block: 'center' })`；点句跳到该句 `startTime` 播放。逐句数据以 `sentences` 为准（见 [[data-model-and-api]]），不做无时间轴估算降级。
-6. **底部固定播放器**：进度条（拖动中不 seek、松手才 seek）、±10s/±30s、播放/暂停、工具栏四钮 —— スピード（七档变速 bottom-sheet）/ カタカナ（假名开关）/ リスニング（集中听力）/ 通訳（翻译模式 bottom-sheet）。
-7. **集中听力模式**：全屏单句卡片（进度徽章 n/N）、2 秒回退、上/下一句跳转播放、文本隐藏盲听；卡片内同样渲染假名，但**不做背景标注**。
+   語のブロックスタイルは `borderRadius: 4; padding: 1px 4px; display: inline-block`。
+5. **再生ハイライトの追従**：`timeupdate` で `startTime`/`endTime` から現在時刻に該当する文を探し → ハイライト（薄い青の背景 `#f0f7ff`）し `scrollIntoView({ block: 'center' })` する；文をクリックするとその文の `startTime` にジャンプして再生する。文単位のデータは `sentences` を基準とし（[[data-model-and-api]] を参照）、タイムラインが無い場合の概算フォールバックは行わない。
+6. **下部固定プレイヤー**：進捗バー（ドラッグ中は seek せず、離した時のみ seek する）、±10秒/±30秒、再生/一時停止、ツールバー4ボタン —— スピード（7段階の速度変更 bottom-sheet）/ カタカナ（振り仮名切り替え）/ リスニング（集中リスニング）/ 通訳（翻訳モード bottom-sheet）。
+7. **集中リスニングモード**：全画面の単文カード（進捗バッジ n/N）、2秒巻き戻し、前/次の文へジャンプ再生、テキスト非表示での聴き取り練習；カード内でも振り仮名は描画するが、**背景着色は行わない**。
 
-## 关键实现要点
+## 実装の要点
 
-- 所有工具栏状态（showRuby / speed / translationMode / listeningMode / showText）由页面持有，播放器是受控组件。
-- `audio.play().catch(...)`：移动端自动播放策略可能拒绝，必须捕获。
-- 显示假名时句子 `lineHeight` 加大（列表 2.2、听力卡片 2.4），给 `<rt>` 留空间。
-- 两种模式共用同一个 `<audio>`（播放器保持挂载），切换模式音频不中断。
+- 全てのツールバー状態（showRuby / speed / translationMode / listeningMode / showText）はページ側が保持し、プレイヤーは制御コンポーネントとする。
+- `audio.play().catch(...)`：モバイル端末の自動再生ポリシーにより拒否される場合があるため、必ずキャッチすること。
+- 振り仮名表示時は文の `lineHeight` を広げ（一覧は 2.2、リスニングカードは 2.4）、`<rt>` 用のスペースを確保する。
+- 2つのモードで同一の `<audio>` を共用し（プレイヤーはマウントされたまま維持する）、モード切り替え時に音声が中断しないようにする。
 
-## 视觉规格
+## ビジュアル仕様
 
-| 元素 | 值 |
+| 要素 | 値 |
 |------|-----|
-| 原文字号/行高 | 18px / 2.2（带假名）、1.8（无假名）；听力卡片 20–22px |
-| 假名 `<rt>` | 10–11px，#888 |
-| 翻译 | 13px，#888，opacity 过渡（click 模式切换不跳动） |
-| 高亮句背景 | #f0f7ff |
-| 词类着色 | 汉字 #ffb74d / 片假名 #4fc3f7 / 英数 #aed581 |
+| 原文の文字サイズ/行高 | 18px / 2.2（振り仮名あり）、1.8（振り仮名なし）；リスニングカードは 20–22px |
+| 振り仮名 `<rt>` | 10–11px、#888 |
+| 翻訳 | 13px、#888、opacity トランジション（click モード切り替え時にガタつかない） |
+| ハイライト文の背景 | #f0f7ff |
+| 品詞着色 | 漢字 #ffb74d / カタカナ #4fc3f7 / 英数字 #aed581 |

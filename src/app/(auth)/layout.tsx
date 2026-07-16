@@ -3,8 +3,8 @@
 import Box from "@mui/material/Box";
 
 /**
- * 用户端登录/注册独立布局：全屏居中卡片，不套网站框架（AppBar/Container），
- * 与后台登录页形态一致；URL 仍为 /login、/register。
+ * ユーザー側のログイン/登録専用レイアウト：全画面中央のカード表示で、サイト共通のフレーム（AppBar/Container）は使用しない。
+ * 管理画面のログインページと同じ形態。URL は /login、/register のまま。
  */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
