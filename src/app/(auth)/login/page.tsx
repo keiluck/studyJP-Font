@@ -35,7 +35,7 @@ function LoginForm() {
       const { token, user } = await login(values);
       setAuth(token, user);
       const redirect = searchParams.get("redirect");
-      // サイト内パスのみ許可し、オープンリダイレクトを防止する
+      // サイト内パスのみ許可し、オープンリダイレクトを防止
       router.replace(redirect?.startsWith("/") ? redirect : "/articles");
     } catch (e) {
       setError((e as Error).message);
