@@ -15,6 +15,7 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import PeopleIcon from "@mui/icons-material/People";
 import ArticleIcon from "@mui/icons-material/Article";
+import QuizIcon from "@mui/icons-material/Quiz";
 import AuthGuard from "@/components/AuthGuard";
 import { useAdminAuth } from "@/store/adminAuth";
 
@@ -23,6 +24,7 @@ const DRAWER_WIDTH = 220;
 const MENU = [
   { label: "ユーザー管理", href: "/admin/users", icon: <PeopleIcon /> },
   { label: "記事管理", href: "/admin/articles", icon: <ArticleIcon /> },
+  { label: "問題管理", href: "/admin/questions", icon: <QuizIcon /> },
 ];
 
 export default function AdminLayout({

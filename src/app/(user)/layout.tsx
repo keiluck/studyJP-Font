@@ -55,6 +55,9 @@ export default function UserLayout({
           <Button color="inherit" component={Link} href="/articles" sx={{ ml: 3 }}>
             コース
           </Button>
+          <Button color="inherit" component={Link} href="/practice">
+            問題演習
+          </Button>
           <Box sx={{ flexGrow: 1 }} />
           {mounted &&
             (user ? (
