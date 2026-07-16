@@ -52,7 +52,7 @@ function LoginForm() {
         <Stack spacing={2} sx={{ mt: 1 }}>
           {error && <Alert severity="error">{error}</Alert>}
           <TextField
-            label="ユーザー名"
+            label="ユーザー"
             autoComplete="username"
             autoFocus
             error={!!errors.username}
