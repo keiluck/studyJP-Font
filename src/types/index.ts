@@ -35,8 +35,8 @@ export interface AdminInfo {
   status: number;
 }
 
-/** 記事レベル */
-export type ArticleLevel = "N5" | "N4" | "N3" | "N2" | "N1";
+/** 記事レベル。値は分類管理（scope=ARTICLE_LEVEL）で管理されるため固定リテラルにしない */
+export type ArticleLevel = string;
 
 /** 記事一覧項目（本文を含まない） */
 export interface ArticleListItem {

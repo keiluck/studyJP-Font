@@ -17,19 +17,19 @@ import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import HeadphonesIcon from "@mui/icons-material/Headphones";
 import { fetchArticles } from "@/api/article";
-import type { ArticleLevel, ArticleListItem, PageResult } from "@/types";
+import { fetchCategories } from "@/api/category";
+import type { ArticleListItem, PageResult } from "@/types";
 
 const PAGE_SIZE = 10;
-const LEVELS: ArticleLevel[] = ["N5", "N4", "N3", "N2", "N1"];
-const CATEGORIES = ["ニュース", "生活", "文化", "科学"];
 
-const LEVEL_COLOR: Record<ArticleLevel, "success" | "info" | "primary" | "warning" | "error"> = {
+const LEVEL_COLOR: Record<string, "success" | "info" | "primary" | "warning" | "error"> = {
   N5: "success",
   N4: "info",
   N3: "primary",
   N2: "warning",
   N1: "error",
 };
+const levelColor = (level: string) => LEVEL_COLOR[level] ?? "default";
 
 function ArticleList() {
   const router = useRouter();
@@ -43,6 +43,17 @@ function ArticleList() {
   const [result, setResult] = useState<PageResult<ArticleListItem> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [levels, setLevels] = useState<string[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    Promise.all([fetchCategories("ARTICLE_LEVEL"), fetchCategories("ARTICLE_CATEGORY")])
+      .then(([levelItems, categoryItems]) => {
+        setLevels(levelItems.map((c) => c.value));
+        setCategories(categoryItems.map((c) => c.value));
+      })
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -94,7 +105,7 @@ function ArticleList() {
           sx={{ minWidth: 120 }}
         >
           <MenuItem value="">すべて</MenuItem>
-          {LEVELS.map((l) => (
+          {levels.map((l) => (
             <MenuItem key={l} value={l}>
               {l}
             </MenuItem>
@@ -109,7 +120,7 @@ function ArticleList() {
           sx={{ minWidth: 140 }}
         >
           <MenuItem value="">すべて</MenuItem>
-          {CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <MenuItem key={c} value={c}>
               {c}
             </MenuItem>
@@ -184,7 +195,7 @@ function ArticleList() {
                         {article.title}
                       </Typography>
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>
-                        <Chip label={article.level} color={LEVEL_COLOR[article.level]} size="small" />
+                        <Chip label={article.level} color={levelColor(article.level)} size="small" />
                         <Typography variant="body2" color="text.secondary">
                           {article.category}
                         </Typography>

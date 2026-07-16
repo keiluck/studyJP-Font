@@ -19,6 +19,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { createQuestion, fetchAdminQuestionDetail, updateQuestion } from "@/api/admin/question";
+import { fetchAdminCategories } from "@/api/admin/category";
 import type { QuestionSavePayload, QuestionType } from "@/types/quiz";
 
 const MIN_OPTIONS = 2;
@@ -50,6 +51,13 @@ export default function QuestionEditPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetchAdminCategories("QUESTION_CATEGORY")
+      .then((items) => setCategoryOptions(items.filter((c) => c.status === 1).map((c) => c.value)))
+      .catch(() => {});
+  }, []);
 
   const {
     control,
@@ -204,7 +212,24 @@ export default function QuestionEditPage() {
                   </TextField>
                 )}
               />
-              <TextField label="分類（任意）" sx={{ flexGrow: 1 }} {...register("category")} />
+              <Controller
+                name="category"
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} select label="分類（任意）" sx={{ flexGrow: 1 }}>
+                    <MenuItem value="">なし</MenuItem>
+                    {/* 編集中の問題が既に無効化された分類を持つ場合も選択肢に残し、変更しない限り送信できるようにする */}
+                    {(field.value && !categoryOptions.includes(field.value)
+                      ? [field.value, ...categoryOptions]
+                      : categoryOptions
+                    ).map((c) => (
+                      <MenuItem key={c} value={c}>
+                        {c}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              />
             </Stack>
 
             <TextField

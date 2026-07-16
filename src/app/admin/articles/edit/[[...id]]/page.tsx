@@ -27,8 +27,9 @@ import {
   fetchAdminArticleDetail,
   updateArticle,
 } from "@/api/admin/article";
+import { fetchAdminCategories } from "@/api/admin/category";
 import { uploadAudio, uploadImage } from "@/api/admin/upload";
-import type { ArticleLevel, ArticleSavePayload } from "@/types";
+import type { ArticleSavePayload } from "@/types";
 
 // wangEditor はクライアント側でのみ描画可能なため、SSR 読み込みを無効化する
 const RichTextEditor = dynamic(() => import("@/components/RichTextEditor"), {
@@ -39,9 +40,6 @@ const RichTextEditor = dynamic(() => import("@/components/RichTextEditor"), {
     </Box>
   ),
 });
-
-const LEVELS: ArticleLevel[] = ["N5", "N4", "N3", "N2", "N1"];
-const CATEGORIES = ["ニュース", "生活", "文化", "科学"];
 
 /** 編集中の音声行（保存前は id を持たない） */
 interface AudioRow {
@@ -61,8 +59,10 @@ export default function ArticleEditPage() {
 
   // フォームの状態（項目数が少なくリッチテキスト/ファイルを含むため、react-hook-form は導入せず useState で直接制御する）
   const [title, setTitle] = useState("");
-  const [level, setLevel] = useState<string>("N5");
-  const [category, setCategory] = useState<string>(CATEGORIES[0]);
+  const [level, setLevel] = useState<string>("");
+  const [category, setCategory] = useState<string>("");
+  const [levelOptions, setLevelOptions] = useState<string[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [content, setContent] = useState("");
   const [translation, setTranslation] = useState(""); // 中国語訳のリッチテキスト。段落は本文と一対一対応
@@ -104,6 +104,23 @@ export default function ArticleEditPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    Promise.all([fetchAdminCategories("ARTICLE_LEVEL"), fetchAdminCategories("ARTICLE_CATEGORY")])
+      .then(([levelItems, categoryItems]) => {
+        const activeLevels = levelItems.filter((c) => c.status === 1).map((c) => c.value);
+        const activeCategories = categoryItems.filter((c) => c.status === 1).map((c) => c.value);
+        setLevelOptions(activeLevels);
+        setCategoryOptions(activeCategories);
+        // 新規作成時のみ、取得できた最初の値をデフォルトにする（編集時は記事側の値をそのまま使う）
+        if (!id) {
+          setLevel((v) => v || activeLevels[0] || "");
+          setCategory((v) => v || activeCategories[0] || "");
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const handleUploadCover = async (file: File) => {
     setUploadingCover(true);
@@ -224,7 +241,8 @@ export default function ArticleEditPage() {
               onChange={(e) => setLevel(e.target.value)}
               sx={{ width: 140 }}
             >
-              {LEVELS.map((l) => (
+              {/* 編集中の記事が既に無効化された値を持つ場合も選択肢に残し、変更しない限り送信できるようにする */}
+              {(level && !levelOptions.includes(level) ? [level, ...levelOptions] : levelOptions).map((l) => (
                 <MenuItem key={l} value={l}>
                   {l}
                 </MenuItem>
@@ -237,7 +255,10 @@ export default function ArticleEditPage() {
               onChange={(e) => setCategory(e.target.value)}
               sx={{ width: 180 }}
             >
-              {CATEGORIES.map((c) => (
+              {(category && !categoryOptions.includes(category)
+                ? [category, ...categoryOptions]
+                : categoryOptions
+              ).map((c) => (
                 <MenuItem key={c} value={c}>
                   {c}
                 </MenuItem>

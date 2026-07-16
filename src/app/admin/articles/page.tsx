@@ -31,11 +31,10 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ImageIcon from "@mui/icons-material/Image";
 import { deleteArticle, fetchAdminArticles } from "@/api/admin/article";
-import type { AdminArticleListItem, ArticleLevel, PageResult } from "@/types";
+import { fetchAdminCategories } from "@/api/admin/category";
+import type { AdminArticleListItem, PageResult } from "@/types";
 
 const PAGE_SIZE = 10;
-const LEVELS: ArticleLevel[] = ["N5", "N4", "N3", "N2", "N1"];
-const CATEGORIES = ["ニュース", "生活", "文化", "科学"];
 
 const formatTime = (s: string) => s?.replace("T", " ").slice(0, 16) || "-";
 
@@ -54,6 +53,17 @@ function ArticleManage() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<AdminArticleListItem | null>(null);
+  const [levels, setLevels] = useState<string[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    Promise.all([fetchAdminCategories("ARTICLE_LEVEL"), fetchAdminCategories("ARTICLE_CATEGORY")])
+      .then(([levelItems, categoryItems]) => {
+        setLevels(levelItems.map((c) => c.value));
+        setCategories(categoryItems.map((c) => c.value));
+      })
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -154,13 +164,13 @@ function ArticleManage() {
           "レベル",
           level,
           "level",
-          LEVELS.map((l) => ({ value: l, label: l }))
+          levels.map((l) => ({ value: l, label: l }))
         )}
         {filterSelect(
           "カテゴリ",
           category,
           "category",
-          CATEGORIES.map((c) => ({ value: c, label: c }))
+          categories.map((c) => ({ value: c, label: c }))
         )}
       </Stack>
 

@@ -30,11 +30,11 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { deleteQuestion, fetchAdminQuestions } from "@/api/admin/question";
+import { fetchAdminCategories } from "@/api/admin/category";
 import type { AdminQuestionListItem, QuestionType } from "@/types/quiz";
 import type { PageResult } from "@/types";
 
 const PAGE_SIZE = 10;
-const CATEGORIES = ["文法", "発音", "語彙", "聴解", "読解"];
 
 const formatTime = (s: string) => s?.replace("T", " ").slice(0, 16) || "-";
 
@@ -55,6 +55,13 @@ function QuestionManage() {
   const [keywordInput, setKeywordInput] = useState(keyword);
   const [toast, setToast] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<AdminQuestionListItem | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetchAdminCategories("QUESTION_CATEGORY")
+      .then((items) => setCategories(items.map((c) => c.value)))
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -152,7 +159,7 @@ function QuestionManage() {
           sx={{ width: 130 }}
         >
           <MenuItem value="">すべて</MenuItem>
-          {CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <MenuItem key={c} value={c}>
               {c}
             </MenuItem>
