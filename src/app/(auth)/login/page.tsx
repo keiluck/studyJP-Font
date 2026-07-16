@@ -57,7 +57,7 @@ function LoginForm() {
             autoFocus
             error={!!errors.username}
             helperText={errors.username?.message}
-            {...field("username", { required: "ユーザー名を入力してください" })}
+            {...field("username", { required: "ユーザーを入力してください" })}
           />
           <TextField
             label="パスワード"
