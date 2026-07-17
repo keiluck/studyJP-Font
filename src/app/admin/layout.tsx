@@ -17,6 +17,7 @@ import PeopleIcon from "@mui/icons-material/People";
 import ArticleIcon from "@mui/icons-material/Article";
 import QuizIcon from "@mui/icons-material/Quiz";
 import CategoryIcon from "@mui/icons-material/Category";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
 import AuthGuard from "@/components/AuthGuard";
 import { useAdminAuth } from "@/store/adminAuth";
 
@@ -27,6 +28,7 @@ const MENU = [
   { label: "記事管理", href: "/admin/articles", icon: <ArticleIcon /> },
   { label: "問題管理", href: "/admin/questions", icon: <QuizIcon /> },
   { label: "分類管理", href: "/admin/categories", icon: <CategoryIcon /> },
+  { label: "英语精读管理", href: "/admin/en-articles", icon: <MenuBookIcon /> },
 ];
 
 export default function AdminLayout({
