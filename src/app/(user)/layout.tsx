@@ -47,20 +47,26 @@ export default function UserLayout({
           <Typography
             variant="h6"
             component={Link}
-            href="/articles"
+            href="/"
             sx={{ color: "inherit", textDecoration: "none" }}
           >
             日本語学習
           </Typography>
-          <Button color="inherit" component={Link} href="/articles" sx={{ ml: 3 }}>
-            コース
-          </Button>
-          <Button color="inherit" component={Link} href="/practice">
-            問題演習
-          </Button>
-          <Button color="inherit" component={Link} href="/en-articles">
-            英语精读
-          </Button>
+          {/* トップナビはPC幅（md以上）でのみ表示する。モバイル幅ではホームのクイックリンク行等で代替する */}
+          <Box sx={{ display: { xs: "none", md: "flex" }, ml: 3, gap: 0.5 }}>
+            <Button color="inherit" component={Link} href="/">
+              ホーム
+            </Button>
+            <Button color="inherit" component={Link} href="/articles">
+              コース
+            </Button>
+            <Button color="inherit" component={Link} href="/practice">
+              問題演習
+            </Button>
+            <Button color="inherit" component={Link} href="/en-articles">
+              英語精読
+            </Button>
+          </Box>
           <Box sx={{ flexGrow: 1 }} />
           {mounted &&
             (user ? (
