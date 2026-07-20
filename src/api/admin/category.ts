@@ -6,9 +6,12 @@ import type {
   CategoryUpdatePayload,
 } from "@/types/category";
 
-/** 有効/無効を問わず全件返す（管理画面用） */
-export function fetchAdminCategories(scope: CategoryScope): Promise<CategoryItem[]> {
-  return adminRequest.get("/api/admin/categories", { params: { scope } });
+/**
+ * 有効/無効を問わず全件返す（管理画面用）。
+ * subject は QUESTION_CATEGORY scope のときのみ意味を持つ（学科でスコープする、フェーズ10）
+ */
+export function fetchAdminCategories(scope: CategoryScope, subject?: string): Promise<CategoryItem[]> {
+  return adminRequest.get("/api/admin/categories", { params: { scope, subject } });
 }
 
 export function createCategory(data: CategoryCreatePayload): Promise<CategoryItem> {

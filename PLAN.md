@@ -221,6 +221,18 @@ UI詳細は `.github/skills/homepage-page/SKILL.md` を正とし、実装は `ho
 
 **受け入れ基準**：無料会員でVIP限定記事を開くと専用案内UIが出ること；VIP会員は問題なく閲覧できること；`CONTENT_ADMIN`/`USER_ADMIN` でログインするとDrawerメニューが絞り込まれ権限外URLへの直接アクセスがリダイレクトされること；ユーザー管理でVIP設定した内容が一覧に反映されること；記事編集で公開レベルを変更すると一覧のバッジに反映されること。
 
+## フェーズ10：問題演習の学科（大分類）モジュール
+
+**目標**：`/practice` エントリページを学科（日本語/英語/AWS等）→分類の2階層カード選択に変更し、管理画面（分類管理・問題管理）で学科を扱えるようにする。新しいページは作らず、既存の `/practice`・`admin/categories`・`admin/questions` を拡張する。
+詳細仕様は `.github/skills/question-subject-page/SKILL.md` を正とし、実装は `question-subject-frontend-dev` agent の規約に従う。API契約はバックエンド `.github/skills/question-subject-module/SKILL.md` を参照。
+
+1. **型・APIクライアント拡張**：`CategoryScope` に `QUESTION_SUBJECT` 追加、`fetchCategories`/`fetchAdminCategories` に `subject` 引数追加、問題関連の型に `subject` 追加。
+2. **`/practice` エントリページ**：学科カード選択→分類カード選択の2階層に変更（コンポーネント内 state、URLクエリは使わない）。
+3. **管理画面：分類管理**：scope タブに「問題学科」追加。「問題分類」タブでは学科サブセレクタで分類辞書を絞り込む。
+4. **管理画面：問題編集・一覧**：学科 select（必須、分類の選択肢は学科に連動）、一覧に学科フィルタ・学科列を追加。
+
+**受け入れ基準**：`/practice` で学科→分類→開始の一連が動作し、出題される問題が選択した学科・分類と一致すること；管理画面で学科ごとに分類辞書が独立して見えること；問題編集で学科を変えると分類の選択肢が切り替わり旧学科の分類値が残らないこと。
+
 ---
 
 ## フェーズ間の依存関係について

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import Box from "@mui/material/Box";
@@ -10,6 +10,7 @@ import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
+import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
@@ -33,6 +34,7 @@ interface OptionFormValue {
 
 interface QuestionFormValues {
   type: QuestionType;
+  subject: string;
   stem: string;
   explanation: string;
   category: string;
@@ -52,11 +54,14 @@ export default function QuestionEditPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [subjectOptions, setSubjectOptions] = useState<string[]>([]);
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  // 学科が実際に切り替わった（＝初回のデータ読み込みではない）場合のみ分類の選択をリセットする
+  const prevSubjectRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    fetchAdminCategories("QUESTION_CATEGORY")
-      .then((items) => setCategoryOptions(items.filter((c) => c.status === 1).map((c) => c.value)))
+    fetchAdminCategories("QUESTION_SUBJECT")
+      .then((items) => setSubjectOptions(items.filter((c) => c.status === 1).map((c) => c.value)))
       .catch(() => {});
   }, []);
 
@@ -71,6 +76,7 @@ export default function QuestionEditPage() {
   } = useForm<QuestionFormValues>({
     defaultValues: {
       type: 1,
+      subject: "",
       stem: "",
       explanation: "",
       category: "",
@@ -82,7 +88,25 @@ export default function QuestionEditPage() {
 
   const { fields, append, remove } = useFieldArray({ control, name: "options" });
   const type = watch("type");
+  const subject = watch("subject");
   const options = watch("options");
+
+  // 分類（QUESTION_CATEGORY）は学科でスコープされるため、学科が変わるたびに選択肢を取り直す
+  useEffect(() => {
+    if (!subject) {
+      setCategoryOptions([]);
+      return;
+    }
+    fetchAdminCategories("QUESTION_CATEGORY", subject)
+      .then((items) => {
+        setCategoryOptions(items.filter((c) => c.status === 1).map((c) => c.value));
+        if (prevSubjectRef.current !== undefined && prevSubjectRef.current !== subject) {
+          setValue("category", "");
+        }
+        prevSubjectRef.current = subject;
+      })
+      .catch(() => {});
+  }, [subject, setValue]);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -92,6 +116,7 @@ export default function QuestionEditPage() {
       const detail = await fetchAdminQuestionDetail(id);
       reset({
         type: detail.type,
+        subject: detail.subject,
         stem: detail.stem,
         explanation: detail.explanation || "",
         category: detail.category || "",
@@ -143,6 +168,7 @@ export default function QuestionEditPage() {
     try {
       const payload: QuestionSavePayload = {
         type: values.type,
+        subject: values.subject,
         stem: values.stem.trim(),
         explanation: values.explanation.trim() || undefined,
         category: values.category.trim() || undefined,
@@ -189,62 +215,97 @@ export default function QuestionEditPage() {
           <Stack spacing={3}>
             {formError && <Alert severity="error">{formError}</Alert>}
 
-            <Stack direction="row" spacing={2}>
-              <Controller
-                name="type"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    select
-                    label="種別"
-                    sx={{ width: 160 }}
-                    onChange={(e) => handleTypeChange(Number(e.target.value) as QuestionType)}
-                  >
-                    <MenuItem value={1}>単一選択</MenuItem>
-                    <MenuItem value={2}>多肢選択</MenuItem>
-                  </TextField>
-                )}
-              />
-              <Controller
-                name="status"
-                control={control}
-                render={({ field }) => (
-                  <TextField {...field} select label="状態" sx={{ width: 160 }}>
-                    <MenuItem value={0}>下書き</MenuItem>
-                    <MenuItem value={1}>公開済み</MenuItem>
-                  </TextField>
-                )}
-              />
-              <Controller
-                name="accessLevel"
-                control={control}
-                render={({ field }) => (
-                  <TextField {...field} select label="公開レベル" sx={{ width: 160 }}>
-                    <MenuItem value={0}>無料試読</MenuItem>
-                    <MenuItem value={1}>VIP限定</MenuItem>
-                  </TextField>
-                )}
-              />
-              <Controller
-                name="category"
-                control={control}
-                render={({ field }) => (
-                  <TextField {...field} select label="分類（任意）" sx={{ flexGrow: 1 }}>
-                    <MenuItem value="">なし</MenuItem>
-                    {/* 編集中の問題が既に無効化された分類を持つ場合も選択肢に残し、変更しない限り送信できるようにする */}
-                    {(field.value && !categoryOptions.includes(field.value)
-                      ? [field.value, ...categoryOptions]
-                      : categoryOptions
-                    ).map((c) => (
-                      <MenuItem key={c} value={c}>
-                        {c}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                )}
-              />
-            </Stack>
+            <Grid container spacing={2}>
+              <Grid item xs={6} sm={4} md={2}>
+                <Controller
+                  name="type"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      select
+                      fullWidth
+                      label="種別"
+                      onChange={(e) => handleTypeChange(Number(e.target.value) as QuestionType)}
+                    >
+                      <MenuItem value={1}>単一選択</MenuItem>
+                      <MenuItem value={2}>多肢選択</MenuItem>
+                    </TextField>
+                  )}
+                />
+              </Grid>
+              <Grid item xs={6} sm={4} md={2}>
+                <Controller
+                  name="status"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField {...field} select fullWidth label="状態">
+                      <MenuItem value={0}>下書き</MenuItem>
+                      <MenuItem value={1}>公開済み</MenuItem>
+                    </TextField>
+                  )}
+                />
+              </Grid>
+              <Grid item xs={6} sm={4} md={2}>
+                <Controller
+                  name="accessLevel"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField {...field} select fullWidth label="公開レベル">
+                      <MenuItem value={0}>無料試読</MenuItem>
+                      <MenuItem value={1}>VIP限定</MenuItem>
+                    </TextField>
+                  )}
+                />
+              </Grid>
+              <Grid item xs={6} sm={4} md={2}>
+                <Controller
+                  name="subject"
+                  control={control}
+                  rules={{ required: "学科を選択してください" }}
+                  render={({ field, fieldState }) => (
+                    <TextField
+                      {...field}
+                      select
+                      fullWidth
+                      label="学科"
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                    >
+                      {/* 編集中の問題が既に無効化された学科を持つ場合も選択肢に残す */}
+                      {(field.value && !subjectOptions.includes(field.value)
+                        ? [field.value, ...subjectOptions]
+                        : subjectOptions
+                      ).map((s) => (
+                        <MenuItem key={s} value={s}>
+                          {s}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={8} md={4}>
+                <Controller
+                  name="category"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField {...field} select fullWidth label="分類（任意）" disabled={!subject}>
+                      <MenuItem value="">なし</MenuItem>
+                      {/* 編集中の問題が既に無効化された分類を持つ場合も選択肢に残し、変更しない限り送信できるようにする */}
+                      {(field.value && !categoryOptions.includes(field.value)
+                        ? [field.value, ...categoryOptions]
+                        : categoryOptions
+                      ).map((c) => (
+                        <MenuItem key={c} value={c}>
+                          {c}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  )}
+                />
+              </Grid>
+            </Grid>
 
             <TextField
               label="題幹"

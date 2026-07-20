@@ -9,6 +9,7 @@ import type { PageQuery, PageResult } from "@/types";
 
 export interface AdminQuestionQuery extends PageQuery {
   type?: QuestionType;
+  subject?: string;
   category?: string;
   status?: number;
   keyword?: string;

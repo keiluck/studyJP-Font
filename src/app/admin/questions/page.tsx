@@ -46,6 +46,7 @@ function QuestionManage() {
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
   const type = searchParams.get("type") || "";
   const status = searchParams.get("status") || "";
+  const subject = searchParams.get("subject") || "";
   const category = searchParams.get("category") || "";
   const keyword = searchParams.get("keyword") || "";
 
@@ -55,13 +56,21 @@ function QuestionManage() {
   const [keywordInput, setKeywordInput] = useState(keyword);
   const [toast, setToast] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<AdminQuestionListItem | null>(null);
+  const [subjects, setSubjects] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
 
   useEffect(() => {
-    fetchAdminCategories("QUESTION_CATEGORY")
-      .then((items) => setCategories(items.map((c) => c.value)))
+    fetchAdminCategories("QUESTION_SUBJECT")
+      .then((items) => setSubjects(items.map((c) => c.value)))
       .catch(() => {});
   }, []);
+
+  // 分類（QUESTION_CATEGORY）は学科でスコープされる。学科フィルタ未選択（すべて）のときは全学科分を返す
+  useEffect(() => {
+    fetchAdminCategories("QUESTION_CATEGORY", subject || undefined)
+      .then((items) => setCategories(items.map((c) => c.value)))
+      .catch(() => {});
+  }, [subject]);
 
   const load = useCallback(async () => {
     try {
@@ -73,6 +82,7 @@ function QuestionManage() {
           pageSize: PAGE_SIZE,
           type: type ? (Number(type) as QuestionType) : undefined,
           status: status === "" ? undefined : Number(status),
+          subject: subject || undefined,
           category: category || undefined,
           keyword: keyword || undefined,
         })
@@ -82,7 +92,7 @@ function QuestionManage() {
     } finally {
       setLoading(false);
     }
-  }, [page, type, status, category, keyword]);
+  }, [page, type, status, subject, category, keyword]);
 
   useEffect(() => {
     load();
@@ -124,7 +134,7 @@ function QuestionManage() {
         </Button>
       </Stack>
 
-      {/* 絞り込み：題幹キーワード + 種別 + 分類 + 状態 */}
+      {/* 絞り込み：題幹キーワード + 種別 + 学科 + 分類 + 状態 */}
       <Stack direction="row" spacing={2} sx={{ mb: 2, flexWrap: "wrap" }}>
         <TextField
           size="small"
@@ -149,6 +159,21 @@ function QuestionManage() {
           <MenuItem value="">すべて</MenuItem>
           <MenuItem value="1">単一選択</MenuItem>
           <MenuItem value="2">多肢選択</MenuItem>
+        </TextField>
+        <TextField
+          size="small"
+          select
+          label="学科"
+          value={subject}
+          onChange={(e) => updateQuery({ subject: e.target.value, category: "", page: "" })}
+          sx={{ width: 130 }}
+        >
+          <MenuItem value="">すべて</MenuItem>
+          {subjects.map((s) => (
+            <MenuItem key={s} value={s}>
+              {s}
+            </MenuItem>
+          ))}
         </TextField>
         <TextField
           size="small"
@@ -203,6 +228,7 @@ function QuestionManage() {
                   <TableCell>ID</TableCell>
                   <TableCell>種別</TableCell>
                   <TableCell>題幹</TableCell>
+                  <TableCell>学科</TableCell>
                   <TableCell>分類</TableCell>
                   <TableCell>公開レベル</TableCell>
                   <TableCell>状態</TableCell>
@@ -226,6 +252,7 @@ function QuestionManage() {
                         {q.stem}
                       </Typography>
                     </TableCell>
+                    <TableCell>{q.subject}</TableCell>
                     <TableCell>{q.category || "-"}</TableCell>
                     <TableCell>
                       <Chip
@@ -265,7 +292,7 @@ function QuestionManage() {
                 ))}
                 {result?.list.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} align="center" sx={{ color: "text.secondary", py: 4 }}>
+                    <TableCell colSpan={9} align="center" sx={{ color: "text.secondary", py: 4 }}>
                       問題がありません
                     </TableCell>
                   </TableRow>

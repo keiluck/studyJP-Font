@@ -58,10 +58,11 @@ export interface PracticeStartResult {
   questionCount: number;
 }
 
-/** 練習開始リクエスト。すべて任意 */
+/** 練習開始リクエスト。すべて任意。subject は学科（大分類、フェーズ10）、category と併用可 */
 export interface PracticeStartPayload {
   count?: number;
   type?: QuestionType;
+  subject?: string;
   category?: string;
 }
 
@@ -71,6 +72,7 @@ export interface PracticeStartPayload {
 export interface AdminQuestionListItem {
   id: number;
   type: QuestionType;
+  subject: string;
   stem: string;
   category: string | null;
   status: number; // 0=下書き 1=公開済み
@@ -90,6 +92,7 @@ export interface AdminQuestionOptionItem {
 export interface AdminQuestionDetail {
   id: number;
   type: QuestionType;
+  subject: string;
   stem: string;
   explanation: string | null;
   category: string | null;
@@ -105,9 +108,10 @@ export interface QuestionOptionPayload {
   correct: boolean;
 }
 
-/** 問題の新規作成／編集リクエスト。選択肢は全置換で同期更新される */
+/** 問題の新規作成／編集リクエスト。選択肢は全置換で同期更新される。subject（学科）は必須 */
 export interface QuestionSavePayload {
   type: QuestionType;
+  subject: string;
   stem: string;
   explanation?: string;
   category?: string;

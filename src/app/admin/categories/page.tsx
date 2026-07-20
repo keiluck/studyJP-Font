@@ -6,6 +6,7 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import Table from "@mui/material/Table";
@@ -40,8 +41,14 @@ import type { CategoryItem, CategoryScope } from "@/types/category";
 const SCOPES: { value: CategoryScope; label: string }[] = [
   { value: "ARTICLE_LEVEL", label: "記事レベル" },
   { value: "ARTICLE_CATEGORY", label: "記事分類" },
+  { value: "EN_ARTICLE_LEVEL", label: "英語レベル" },
+  { value: "EN_ARTICLE_CATEGORY", label: "英語分類" },
   { value: "QUESTION_CATEGORY", label: "問題分類" },
+  { value: "QUESTION_SUBJECT", label: "問題学科" },
 ];
+
+/** QUESTION_CATEGORY は学科（QUESTION_SUBJECT）でさらにスコープされる（フェーズ10） */
+const SUBJECT_SCOPED: CategoryScope = "QUESTION_CATEGORY";
 
 const formatTime = (s: string) => s?.replace("T", " ").slice(0, 16) || "-";
 
@@ -51,6 +58,8 @@ interface CategoryFormValues {
 
 export default function CategoryManagePage() {
   const [scope, setScope] = useState<CategoryScope>("ARTICLE_LEVEL");
+  const [subjectOptions, setSubjectOptions] = useState<CategoryItem[]>([]);
+  const [subject, setSubject] = useState("");
   const [list, setList] = useState<CategoryItem[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,17 +79,35 @@ export default function CategoryManagePage() {
     formState: { errors },
   } = useForm<CategoryFormValues>();
 
+  const needsSubject = scope === SUBJECT_SCOPED;
+
+  // 問題分類タブを開いたら学科の一覧を取得し、選択中の学科が無ければ先頭を選ぶ
+  useEffect(() => {
+    if (!needsSubject) return;
+    fetchAdminCategories("QUESTION_SUBJECT")
+      .then((items) => {
+        setSubjectOptions(items);
+        setSubject((cur) => (cur && items.some((i) => i.value === cur) ? cur : items[0]?.value || ""));
+      })
+      .catch(() => {});
+  }, [needsSubject]);
+
   const load = useCallback(async () => {
+    if (needsSubject && !subject) {
+      setList([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
-      setList(await fetchAdminCategories(scope));
+      setList(await fetchAdminCategories(scope, needsSubject ? subject : undefined));
     } catch (err) {
       setError(err instanceof Error ? err.message : "読み込みに失敗しました");
     } finally {
       setLoading(false);
     }
-  }, [scope]);
+  }, [scope, needsSubject, subject]);
 
   useEffect(() => {
     load();
@@ -112,7 +139,7 @@ export default function CategoryManagePage() {
         setList((l) => (l ? l.map((c) => (c.id === editing.id ? updated : c)) : l));
         setToast("分類を更新しました");
       } else {
-        await createCategory({ scope, value: values.value });
+        await createCategory({ scope, subject: needsSubject ? subject : undefined, value: values.value });
         setToast("分類を追加しました");
         await load();
       }
@@ -155,7 +182,12 @@ export default function CategoryManagePage() {
         <Typography variant="h5" sx={{ flexGrow: 1 }}>
           分類管理
         </Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={openCreate}
+          disabled={needsSubject && !subject}
+        >
           新規追加
         </Button>
       </Stack>
@@ -171,6 +203,25 @@ export default function CategoryManagePage() {
           <Tab key={s.value} value={s.value} label={s.label} />
         ))}
       </Tabs>
+
+      {/* 問題分類は学科（QUESTION_SUBJECT）でスコープされるため、学科サブセレクタで絞り込む */}
+      {needsSubject && (
+        <TextField
+          select
+          size="small"
+          label="学科"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          sx={{ mb: 2, width: 200 }}
+        >
+          {subjectOptions.length === 0 && <MenuItem value="">学科がありません</MenuItem>}
+          {subjectOptions.map((s) => (
+            <MenuItem key={s.value} value={s.value}>
+              {s.value}
+            </MenuItem>
+          ))}
+        </TextField>
+      )}
 
       {loading ? (
         <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
@@ -250,7 +301,9 @@ export default function CategoryManagePage() {
       {/* 新規／編集 Dialog */}
       <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>
-          {editing ? `分類の編集 · ${editing.value}` : `新規分類（${SCOPES.find((s) => s.value === scope)?.label}）`}
+          {editing
+            ? `分類の編集 · ${editing.value}`
+            : `新規分類（${SCOPES.find((s) => s.value === scope)?.label}${needsSubject ? ` · ${subject}` : ""}）`}
         </DialogTitle>
         <Box component="form" onSubmit={handleSubmit(onSubmitForm)} noValidate>
           <DialogContent>
