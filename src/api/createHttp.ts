@@ -58,11 +58,12 @@ export function createHttp({ tokenKey, loginPath }: HttpOptions): Http {
         handleUnauthorized();
         const message =
           error.response?.data?.message || "ログインの有効期限が切れました。再度ログインしてください";
-        return Promise.reject(new Error(message));
+        return Promise.reject(Object.assign(new Error(message), { status: 401 }));
       }
       const message =
         error.response?.data?.message || error.message || "ネットワークエラーが発生しました。しばらくしてから再度お試しください";
-      return Promise.reject(new Error(message));
+      // HTTPステータス（403のVIP限定判定など）を呼び出し元で参照できるように付与する
+      return Promise.reject(Object.assign(new Error(message), { status: error.response?.status }));
     }
   );
 

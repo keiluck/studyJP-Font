@@ -13,6 +13,7 @@ import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
 import { adminLogin, AdminLoginParams } from "@/api/admin/auth";
 import { useAdminAuth } from "@/store/adminAuth";
+import { visibleAdminMenu } from "@/config/adminMenu";
 
 function AdminLoginForm() {
   const router = useRouter();
@@ -31,12 +32,12 @@ function AdminLoginForm() {
     setError(null);
     setSubmitting(true);
     try {
-      const { token, id, username } = await adminLogin(values);
-      setAuth(token, { id, username, status: 1 });
+      const { token, id, username, role } = await adminLogin(values);
+      setAuth(token, { id, username, status: 1, role });
       const redirect = searchParams.get("redirect");
-      // 管理画面内のパスのみ許可し、オープンリダイレクトを防止する
+      // 管理画面内のパスのみ許可し、オープンリダイレクトを防止する。既定の遷移先は固定パスではなく本人のロールで見える最初のメニュー
       router.replace(
-        redirect?.startsWith("/admin") ? redirect : "/admin/articles"
+        redirect?.startsWith("/admin") ? redirect : visibleAdminMenu(role)[0]?.href ?? "/admin"
       );
     } catch (e) {
       setError((e as Error).message);

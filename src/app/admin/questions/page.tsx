@@ -204,6 +204,7 @@ function QuestionManage() {
                   <TableCell>種別</TableCell>
                   <TableCell>題幹</TableCell>
                   <TableCell>分類</TableCell>
+                  <TableCell>公開レベル</TableCell>
                   <TableCell>状態</TableCell>
                   <TableCell>更新日時</TableCell>
                   <TableCell align="right">操作</TableCell>
@@ -226,6 +227,14 @@ function QuestionManage() {
                       </Typography>
                     </TableCell>
                     <TableCell>{q.category || "-"}</TableCell>
+                    <TableCell>
+                      <Chip
+                        size="small"
+                        label={q.accessLevel === 1 ? "VIP限定" : "無料試読"}
+                        color={q.accessLevel === 1 ? "warning" : "default"}
+                        variant={q.accessLevel === 1 ? "filled" : "outlined"}
+                      />
+                    </TableCell>
                     <TableCell>
                       <Chip
                         size="small"
@@ -256,7 +265,7 @@ function QuestionManage() {
                 ))}
                 {result?.list.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} align="center" sx={{ color: "text.secondary", py: 4 }}>
+                    <TableCell colSpan={8} align="center" sx={{ color: "text.secondary", py: 4 }}>
                       問題がありません
                     </TableCell>
                   </TableRow>

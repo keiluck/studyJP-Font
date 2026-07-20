@@ -16,6 +16,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
+import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 import { fetchEnArticles } from "@/api/enArticle";
 import { fetchCategories } from "@/api/category";
 import type { EnArticleListItem } from "@/types/enArticle";
@@ -69,7 +70,7 @@ function EnArticleList() {
         })
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "加载失败");
+      setError(err instanceof Error ? err.message : "読み込みに失敗しました");
     } finally {
       setLoading(false);
     }
@@ -94,17 +95,17 @@ function EnArticleList() {
     <Box>
       <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3, flexWrap: "wrap" }}>
         <Typography variant="h5" sx={{ flexGrow: 1 }}>
-          英语精读
+          英語精読
         </Typography>
         <TextField
           select
           size="small"
-          label="等级"
+          label="レベル"
           value={level}
           onChange={(e) => updateQuery({ level: e.target.value, page: "" })}
           sx={{ minWidth: 120 }}
         >
-          <MenuItem value="">全部</MenuItem>
+          <MenuItem value="">すべて</MenuItem>
           {levels.map((l) => (
             <MenuItem key={l} value={l}>
               {l}
@@ -114,12 +115,12 @@ function EnArticleList() {
         <TextField
           select
           size="small"
-          label="分类"
+          label="カテゴリ"
           value={category}
           onChange={(e) => updateQuery({ category: e.target.value, page: "" })}
           sx={{ minWidth: 140 }}
         >
-          <MenuItem value="">全部</MenuItem>
+          <MenuItem value="">すべて</MenuItem>
           {categories.map((c) => (
             <MenuItem key={c} value={c}>
               {c}
@@ -137,7 +138,7 @@ function EnArticleList() {
           severity="error"
           action={
             <Button color="inherit" size="small" onClick={load}>
-              重试
+              再試行
             </Button>
           }
         >
@@ -145,7 +146,7 @@ function EnArticleList() {
         </Alert>
       ) : !result || result.list.length === 0 ? (
         <Typography color="text.secondary" align="center" sx={{ py: 8 }}>
-          暂无文章
+          記事がありません
         </Typography>
       ) : (
         <>
@@ -157,30 +158,41 @@ function EnArticleList() {
                     sx={{ height: "100%" }}
                     onClick={() => router.push(`/en-articles/${article.id}`)}
                   >
-                    {article.coverUrl ? (
-                      <Box
-                        component="img"
-                        src={article.coverUrl}
-                        alt={article.title}
-                        sx={{ width: "100%", height: 140, objectFit: "cover" }}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <Box
-                        sx={{
-                          height: 140,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          background: "linear-gradient(135deg, #dfeceb 0%, #1f5c57 100%)",
-                          color: "#fff",
-                        }}
-                      >
-                        <MenuBookIcon sx={{ fontSize: 48 }} />
-                      </Box>
-                    )}
+                    <Box sx={{ position: "relative" }}>
+                      {article.coverUrl ? (
+                        <Box
+                          component="img"
+                          src={article.coverUrl}
+                          alt={article.title}
+                          sx={{ width: "100%", height: 140, objectFit: "cover" }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <Box
+                          sx={{
+                            height: 140,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            background: "linear-gradient(135deg, #dfeceb 0%, #1f5c57 100%)",
+                            color: "#fff",
+                          }}
+                        >
+                          <MenuBookIcon sx={{ fontSize: 48 }} />
+                        </Box>
+                      )}
+                      {article.accessLevel === 1 && (
+                        <Chip
+                          icon={<WorkspacePremiumIcon />}
+                          label="VIP"
+                          color="warning"
+                          size="small"
+                          sx={{ position: "absolute", top: 8, right: 8 }}
+                        />
+                      )}
+                    </Box>
                     <CardContent>
                       <Typography
                         variant="subtitle1"

@@ -13,6 +13,7 @@ export interface EnArticleListItem {
   level: EnArticleLevel;
   category: string;
   coverUrl: string | null;
+  accessLevel: number; // 0=無料試読 1=VIP限定（フェーズ9）
   createdAt: string;
 }
 
@@ -61,6 +62,7 @@ export interface AdminEnArticleListItem {
   category: string;
   coverUrl: string | null;
   status: number; // 0=下書き 1=公開済み
+  accessLevel: number; // 0=無料試読 1=VIP限定（フェーズ9）
   createdAt: string;
   updatedAt: string;
 }
@@ -82,6 +84,7 @@ export interface EnArticleSavePayload {
   category: string;
   coverUrl: string | null;
   status: number; // 0=下書き 1=公開
+  accessLevel: number; // 0=無料試読 1=VIP限定（フェーズ9）
   audios: { url: string; title: string | null; sortOrder: number }[];
   words: {
     sentenceIndex: number;

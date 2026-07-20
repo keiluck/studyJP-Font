@@ -11,6 +11,8 @@ import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import IconButton from "@mui/material/IconButton";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
+import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
+import Link from "next/link";
 import AudioPlayer, { TranslationMode } from "@/components/AudioPlayer";
 import SentenceItem, { renderRubyWords } from "@/components/SentenceItem";
 import { fetchArticleDetail } from "@/api/article";
@@ -43,6 +45,7 @@ export default function ArticleReaderPage() {
   const [article, setArticle] = useState<ArticleDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [vipRequired, setVipRequired] = useState(false);
 
   // ツールバーの状態（ページ側で保持し、プレイヤーを制御する）
   const [showRuby, setShowRuby] = useState(true);
@@ -62,11 +65,16 @@ export default function ArticleReaderPage() {
     try {
       setLoading(true);
       setError(null);
+      setVipRequired(false);
       setArticle(await fetchArticleDetail(Number(id)));
       setAudioIndex(0);
       setListeningIndex(0);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "読み込みに失敗しました");
+      if ((err as { status?: number }).status === 403) {
+        setVipRequired(true);
+      } else {
+        setError(err instanceof Error ? err.message : "読み込みに失敗しました");
+      }
     } finally {
       setLoading(false);
     }
@@ -143,6 +151,30 @@ export default function ArticleReaderPage() {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
         <CircularProgress />
+      </Box>
+    );
+  }
+  if (vipRequired) {
+    return (
+      <Box
+        sx={{
+          maxWidth: 480,
+          mx: "auto",
+          textAlign: "center",
+          py: 8,
+          px: 3,
+        }}
+      >
+        <WorkspacePremiumIcon sx={{ fontSize: 56, color: "warning.main", mb: 2 }} />
+        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+          この記事はVIP会員限定です
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          VIP会員になると、すべてのコースを制限なくご利用いただけます。
+        </Typography>
+        <Button component={Link} href="/articles" variant="outlined">
+          コース一覧に戻る
+        </Button>
       </Box>
     );
   }

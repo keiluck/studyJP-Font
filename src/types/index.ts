@@ -1,3 +1,5 @@
+import type { AdminRole } from "./permission";
+
 /** バックエンド共通レスポンス形式。axios のインターセプターで解包されるため、業務コードは基本的に data のみを扱う */
 export interface ApiResponse<T = unknown> {
   code: number;
@@ -25,6 +27,8 @@ export interface UserInfo {
   username: string;
   email: string;
   status: number; // 1=有効 0=無効
+  vip: boolean; // フェーズ9：vipExpireAt が未来かどうかの算出値
+  vipExpireAt: string | null;
   createdAt: string;
 }
 
@@ -33,6 +37,7 @@ export interface AdminInfo {
   id: number;
   username: string;
   status: number;
+  role: AdminRole;
 }
 
 /** 記事レベル。値は分類管理（scope=ARTICLE_LEVEL）で管理されるため固定リテラルにしない */
@@ -45,6 +50,7 @@ export interface ArticleListItem {
   level: ArticleLevel;
   category: string;
   coverUrl: string | null;
+  accessLevel: number; // 0=無料試読 1=VIP限定（フェーズ9）
   createdAt: string;
 }
 
@@ -101,6 +107,7 @@ export interface AdminLoginResult {
   token: string;
   id: number;
   username: string;
+  role: AdminRole;
 }
 
 /** 管理画面の記事一覧項目（バックエンドの AdminArticleListItem。状態と更新日時を含む） */
@@ -111,6 +118,7 @@ export interface AdminArticleListItem {
   category: string;
   coverUrl: string | null;
   status: number; // 0=下書き 1=公開済み
+  accessLevel: number; // 0=無料試読 1=VIP限定（フェーズ9）
   createdAt: string;
   updatedAt: string;
 }
@@ -131,5 +139,6 @@ export interface ArticleSavePayload {
   category: string;
   coverUrl: string | null;
   status: number; // 0=下書き 1=公開
+  accessLevel: number; // 0=無料試読 1=VIP限定（フェーズ9）
   audios: { url: string; title: string | null; sortOrder: number }[];
 }

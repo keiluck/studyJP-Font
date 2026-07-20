@@ -79,7 +79,7 @@ function EnArticleManage() {
         })
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "加载失败");
+      setError(err instanceof Error ? err.message : "読み込みに失敗しました");
     } finally {
       setLoading(false);
     }
@@ -102,7 +102,7 @@ function EnArticleManage() {
     if (!deleting) return;
     try {
       await deleteEnArticle(deleting.id);
-      setToast("已删除文章");
+      setToast("記事を削除しました");
       setDeleting(null);
       await load();
     } catch (e) {
@@ -128,7 +128,7 @@ function EnArticleManage() {
       onChange={(e) => updateQuery({ [key]: e.target.value, page: "" })}
       sx={{ width: 130 }}
     >
-      <MenuItem value="">全部</MenuItem>
+      <MenuItem value="">すべて</MenuItem>
       {options.map((o) => (
         <MenuItem key={o.value} value={o.value}>
           {o.label}
@@ -141,20 +141,20 @@ function EnArticleManage() {
     <Box>
       <Stack direction="row" alignItems="center" sx={{ mb: 2 }} spacing={2}>
         <Typography variant="h5" sx={{ flexGrow: 1 }}>
-          英语精读管理
+          英語精読管理
         </Typography>
         <Button variant="contained" startIcon={<AddIcon />} component={Link} href="/admin/en-articles/edit">
-          新建文章
+          新規記事
         </Button>
       </Stack>
 
       <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-        {filterSelect("状态", status, "status", [
-          { value: "1", label: "已发布" },
-          { value: "0", label: "草稿" },
+        {filterSelect("状態", status, "status", [
+          { value: "1", label: "公開済み" },
+          { value: "0", label: "下書き" },
         ])}
-        {filterSelect("等级", level, "level", levels.map((l) => ({ value: l, label: l })))}
-        {filterSelect("分类", category, "category", categories.map((c) => ({ value: c, label: c })))}
+        {filterSelect("レベル", level, "level", levels.map((l) => ({ value: l, label: l })))}
+        {filterSelect("カテゴリ", category, "category", categories.map((c) => ({ value: c, label: c })))}
       </Stack>
 
       {loading ? (
@@ -166,7 +166,7 @@ function EnArticleManage() {
           severity="error"
           action={
             <Button color="inherit" size="small" onClick={load}>
-              重试
+              再試行
             </Button>
           }
         >
@@ -179,12 +179,13 @@ function EnArticleManage() {
               <TableHead>
                 <TableRow>
                   <TableCell>ID</TableCell>
-                  <TableCell>封面</TableCell>
-                  <TableCell>标题</TableCell>
-                  <TableCell>等级</TableCell>
-                  <TableCell>分类</TableCell>
-                  <TableCell>状态</TableCell>
-                  <TableCell>更新时间</TableCell>
+                  <TableCell>カバー画像</TableCell>
+                  <TableCell>タイトル</TableCell>
+                  <TableCell>レベル</TableCell>
+                  <TableCell>カテゴリ</TableCell>
+                  <TableCell>公開レベル</TableCell>
+                  <TableCell>状態</TableCell>
+                  <TableCell>更新日時</TableCell>
                   <TableCell align="right">操作</TableCell>
                 </TableRow>
               </TableHead>
@@ -214,7 +215,15 @@ function EnArticleManage() {
                     <TableCell>
                       <Chip
                         size="small"
-                        label={article.status === 1 ? "已发布" : "草稿"}
+                        label={article.accessLevel === 1 ? "VIP限定" : "無料試読"}
+                        color={article.accessLevel === 1 ? "warning" : "default"}
+                        variant={article.accessLevel === 1 ? "filled" : "outlined"}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        size="small"
+                        label={article.status === 1 ? "公開済み" : "下書き"}
                         color={article.status === 1 ? "success" : "default"}
                       />
                     </TableCell>
@@ -226,7 +235,7 @@ function EnArticleManage() {
                         component={Link}
                         href={`/admin/en-articles/edit/${article.id}`}
                       >
-                        编辑
+                        編集
                       </Button>
                       <Button
                         size="small"
@@ -234,15 +243,15 @@ function EnArticleManage() {
                         startIcon={<DeleteIcon />}
                         onClick={() => setDeleting(article)}
                       >
-                        删除
+                        削除
                       </Button>
                     </TableCell>
                   </TableRow>
                 ))}
                 {result?.list.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} align="center" sx={{ color: "text.secondary", py: 4 }}>
-                      暂无文章
+                    <TableCell colSpan={9} align="center" sx={{ color: "text.secondary", py: 4 }}>
+                      記事がありません
                     </TableCell>
                   </TableRow>
                 )}
@@ -258,16 +267,16 @@ function EnArticleManage() {
       )}
 
       <Dialog open={!!deleting} onClose={() => setDeleting(null)}>
-        <DialogTitle>删除文章</DialogTitle>
+        <DialogTitle>記事の削除</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            确定要删除文章「{deleting?.title}」吗？（软删除，删除后学习者端将立即不可见）
+            記事「{deleting?.title}」を削除してもよろしいですか？（論理削除のため、削除後は即座に一般公開ページから見えなくなります）
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleting(null)}>取消</Button>
+          <Button onClick={() => setDeleting(null)}>キャンセル</Button>
           <Button color="error" variant="contained" onClick={handleDelete}>
-            删除
+            削除
           </Button>
         </DialogActions>
       </Dialog>

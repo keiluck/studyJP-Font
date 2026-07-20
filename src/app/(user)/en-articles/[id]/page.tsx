@@ -11,6 +11,8 @@ import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import IconButton from "@mui/material/IconButton";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
+import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
+import Link from "next/link";
 import EnAudioPlayer, { EnTranslationMode } from "@/components/EnArticle/EnAudioPlayer";
 import EnSentenceItem from "@/components/EnArticle/EnSentenceItem";
 import EnWordSheet from "@/components/EnArticle/EnWordSheet";
@@ -21,7 +23,7 @@ import type { EnArticleDetail } from "@/types/enArticle";
 const formatDate = (createdAt: string) => {
   const date = new Date(createdAt.replace(" ", "T"));
   if (isNaN(date.getTime())) return createdAt;
-  return date.toLocaleDateString("zh-CN", {
+  return date.toLocaleDateString("ja-JP", {
     month: "2-digit",
     day: "2-digit",
     weekday: "short",
@@ -41,6 +43,7 @@ export default function EnArticleReaderPage() {
   const [article, setArticle] = useState<EnArticleDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [vipRequired, setVipRequired] = useState(false);
 
   const [speed, setSpeed] = useState(1.0);
   const [translationMode, setTranslationMode] = useState<EnTranslationMode>("always");
@@ -62,11 +65,16 @@ export default function EnArticleReaderPage() {
     try {
       setLoading(true);
       setError(null);
+      setVipRequired(false);
       setArticle(await fetchEnArticleDetail(Number(id)));
       setAudioIndex(0);
       setListeningIndex(0);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "加载失败");
+      if ((err as { status?: number }).status === 403) {
+        setVipRequired(true);
+      } else {
+        setError(err instanceof Error ? err.message : "読み込みに失敗しました");
+      }
     } finally {
       setLoading(false);
     }
@@ -136,17 +144,41 @@ export default function EnArticleReaderPage() {
       </Box>
     );
   }
+  if (vipRequired) {
+    return (
+      <Box
+        sx={{
+          maxWidth: 480,
+          mx: "auto",
+          textAlign: "center",
+          py: 8,
+          px: 3,
+        }}
+      >
+        <WorkspacePremiumIcon sx={{ fontSize: 56, color: "warning.main", mb: 2 }} />
+        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+          この記事はVIP会員限定です
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          VIP会員になると、すべての精読記事を制限なくご利用いただけます。
+        </Typography>
+        <Button component={Link} href="/en-articles" variant="outlined">
+          記事一覧に戻る
+        </Button>
+      </Box>
+    );
+  }
   if (error || !article) {
     return (
       <Alert
         severity="error"
         action={
           <Button color="inherit" size="small" onClick={load}>
-            重试
+            再試行
           </Button>
         }
       >
-        {error || "文章不存在"}
+        {error || "記事が見つかりません"}
       </Alert>
     );
   }
@@ -184,7 +216,7 @@ export default function EnArticleReaderPage() {
           {audios.map((audio, index) => (
             <Chip
               key={audio.id}
-              label={audio.title || `音频 ${index + 1}`}
+              label={audio.title || `音声 ${index + 1}`}
               color={index === audioIndex ? "primary" : "default"}
               onClick={() => setAudioIndex(index)}
             />
@@ -220,10 +252,10 @@ export default function EnArticleReaderPage() {
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", px: 1, py: 1.5, bgcolor: "background.paper" }}>
-            <IconButton onClick={() => setListeningMode(false)} aria-label="返回">
+            <IconButton onClick={() => setListeningMode(false)} aria-label="戻る">
               <ArrowBackIosNewIcon />
             </IconButton>
-            <Typography sx={{ fontWeight: 700, fontSize: 18 }}>返回</Typography>
+            <Typography sx={{ fontWeight: 700, fontSize: 18 }}>戻る</Typography>
           </Box>
           <Box sx={{ flexGrow: 1, p: 2, overflow: "hidden" }}>
             <Box

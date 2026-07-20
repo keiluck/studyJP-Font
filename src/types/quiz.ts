@@ -74,6 +74,7 @@ export interface AdminQuestionListItem {
   stem: string;
   category: string | null;
   status: number; // 0=下書き 1=公開済み
+  accessLevel: number; // 0=無料試読 1=VIP限定（フェーズ9）
   createdAt: string;
   updatedAt: string;
 }
@@ -93,6 +94,7 @@ export interface AdminQuestionDetail {
   explanation: string | null;
   category: string | null;
   status: number;
+  accessLevel: number; // 0=無料試読 1=VIP限定（フェーズ9）
   createdAt: string;
   updatedAt: string;
   options: AdminQuestionOptionItem[];
@@ -110,5 +112,6 @@ export interface QuestionSavePayload {
   explanation?: string;
   category?: string;
   status: number; // 0=下書き 1=公開
+  accessLevel: number; // 0=無料試読 1=VIP限定（フェーズ9）
   options: QuestionOptionPayload[];
 }

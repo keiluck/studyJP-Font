@@ -207,6 +207,22 @@ UI詳細は `.github/skills/homepage-page/SKILL.md` を正とし、実装は `ho
 
 ---
 
+## フェーズ9：権限モジュール（コンテンツの無料/VIP + 管理画面のロール別メニュー）
+
+**目標**：①学習者向けの記事一覧・英語精読一覧にVIP限定バッジを表示し、VIP限定コンテンツの詳細ページは無料会員に専用の案内UIを出すこと。②ユーザー管理画面でVIP資格（期限付き）を付与できること。③管理画面のDrawerメニューが管理者のロール（SUPER_ADMIN/CONTENT_ADMIN/USER_ADMIN）に応じて絞り込まれ、権限外URLへの直接アクセスがリダイレクトされること。④管理者アカウント自体を管理する新規ページ（SUPER_ADMIN専用）。既存の記事一覧/詳細・英語精読一覧/詳細・問題演習・ユーザー管理・admin レイアウトを横断して変更する。
+詳細仕様は `.github/skills/permissions-module/SKILL.md` を正とし、実装は `permissions-frontend-dev` agent の規約に従う。API契約はバックエンド `.github/skills/permissions-module/SKILL.md` を参照。
+
+1. **型拡張**：`UserInfo` に `vip`/`vipExpireAt`、`AdminInfo` に `role`、記事/英語精読/問題関連の型に `accessLevel` を追加。
+2. **学習者向けVIPロックUI**：一覧のVIPバッジ、詳細ページの403専用案内UI（既存の汎用エラーAlertと区別する）。
+3. **ユーザー管理へのVIP設定UI** `/admin/users`：VIP列 + 期限設定Dialog（`PUT /api/admin/users/{id}/vip`）。
+4. **管理画面メニューのロール制御**：`admin/layout.tsx` の `MENU` に `roles` を追加してDrawerを絞り込み、権限外パスへの直接アクセスは `/admin` へリダイレクト（UX目的、真の防御はバックエンド）。
+5. **管理者アカウント管理**（新規）`/admin/admins`（SUPER_ADMIN専用、`/admin/categories` と同様のDialogベースCRUD）。
+6. **コンテンツ編集フォームに公開レベル追加**：`/admin/articles/edit`・`/admin/en-articles/edit`・`/admin/questions/edit` に無料/VIP選択を追加。
+
+**受け入れ基準**：無料会員でVIP限定記事を開くと専用案内UIが出ること；VIP会員は問題なく閲覧できること；`CONTENT_ADMIN`/`USER_ADMIN` でログインするとDrawerメニューが絞り込まれ権限外URLへの直接アクセスがリダイレクトされること；ユーザー管理でVIP設定した内容が一覧に反映されること；記事編集で公開レベルを変更すると一覧のバッジに反映されること。
+
+---
+
 ## フェーズ間の依存関係について
 
 - フェーズ1はバックエンドに依存しない；フェーズ2以降は対応するバックエンドのAPIが整っている必要がある。

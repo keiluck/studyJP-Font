@@ -39,3 +39,8 @@ export function deleteUser(id: number): Promise<void> {
 export function updateUserStatus(id: number, status: number): Promise<void> {
   return adminRequest.put(`/api/admin/users/${id}/status`, { status });
 }
+
+/** VIP設定（フェーズ9）。vipExpireAt に null または過去日時を渡すとVIP解除 */
+export function updateUserVip(id: number, vipExpireAt: string | null): Promise<void> {
+  return adminRequest.put(`/api/admin/users/${id}/vip`, { vipExpireAt });
+}

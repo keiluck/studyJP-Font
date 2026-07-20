@@ -50,9 +50,9 @@ interface EnAudioPlayerProps {
 const SPEED_OPTIONS = [0.6, 0.8, 1.0, 1.1, 1.2, 1.5, 2.0];
 
 const TRANSLATION_OPTIONS: { value: EnTranslationMode; label: string }[] = [
-  { value: "always", label: "显示中文翻译" },
-  { value: "click", label: "点击后显示翻译" },
-  { value: "hidden", label: "隐藏翻译" },
+  { value: "always", label: "翻訳を表示する" },
+  { value: "click", label: "クリックして翻訳を表示する" },
+  { value: "hidden", label: "翻訳を非表示する" },
 ];
 
 const formatTime = (sec: number) => {
@@ -197,7 +197,7 @@ export default function EnAudioPlayer({
         {isListeningMode ? (
           /* 集中聴力モード：コンパクトな1行操作バー */
           <Box sx={{ display: "flex", justifyContent: "space-around", alignItems: "center", py: 1.5 }}>
-            <IconButton onClick={onPrevSentence} aria-label="上一句">
+            <IconButton onClick={onPrevSentence} aria-label="前の文">
               <SkipPreviousIcon fontSize="large" />
             </IconButton>
             <IconButton
@@ -207,10 +207,10 @@ export default function EnAudioPlayer({
             >
               {isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
             </IconButton>
-            <IconButton onClick={onNextSentence} aria-label="下一句">
+            <IconButton onClick={onNextSentence} aria-label="次の文">
               <SkipNextIcon fontSize="large" />
             </IconButton>
-            <IconButton onClick={onToggleText} aria-label="切换文本显示">
+            <IconButton onClick={onToggleText} aria-label="テキスト表示切替">
               {showText ? <VisibilityIcon /> : <VisibilityOffIcon />}
             </IconButton>
           </Box>
@@ -264,16 +264,16 @@ export default function EnAudioPlayer({
                   <SpeedIcon fontSize="small" />
                   <Typography sx={{ fontWeight: 700, fontSize: 15 }}>{speed}x</Typography>
                 </Box>,
-                "速度",
+                "スピード",
                 () => setSpeedOpen(true)
               )}
-              {toolButton(<HeadphonesIcon />, "集中听力", onOpenListening)}
-              {toolButton(<TranslateIcon />, "翻译", () => setTransOpen(true))}
+              {toolButton(<HeadphonesIcon />, "集中的リスニング", onOpenListening)}
+              {toolButton(<TranslateIcon />, "通訳", () => setTransOpen(true))}
               {toolButton(
                 <Badge variant="dot" color="error">
                   <MenuBookIcon sx={{ color: "#1f5c57" }} />
                 </Badge>,
-                "单词",
+                "単語",
                 onOpenWords
               )}
             </Box>
@@ -284,7 +284,7 @@ export default function EnAudioPlayer({
       {bottomSheet(
         speedOpen,
         () => setSpeedOpen(false),
-        "速度",
+        "スピード",
         <List>
           {SPEED_OPTIONS.map((opt) => (
             <ListItemButton
@@ -304,7 +304,7 @@ export default function EnAudioPlayer({
       {bottomSheet(
         transOpen,
         () => setTransOpen(false),
-        "翻译",
+        "通訳",
         <List>
           {TRANSLATION_OPTIONS.map((opt) => (
             <ListItemButton

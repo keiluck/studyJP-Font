@@ -67,6 +67,7 @@ export default function ArticleEditPage() {
   const [content, setContent] = useState("");
   const [translation, setTranslation] = useState(""); // 中国語訳のリッチテキスト。段落は本文と一対一対応
   const [audios, setAudios] = useState<AudioRow[]>([]);
+  const [accessLevel, setAccessLevel] = useState(0); // 0=無料試読 1=VIP限定（フェーズ9）
 
   const [titleError, setTitleError] = useState<string | null>(null);
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -89,6 +90,7 @@ export default function ArticleEditPage() {
       setCoverUrl(detail.coverUrl);
       setContent(detail.content || "");
       setTranslation(detail.translation || "");
+      setAccessLevel(detail.accessLevel ?? 0);
       setAudios(
         [...detail.audios]
           .sort((a, b) => a.sortOrder - b.sortOrder)
@@ -174,6 +176,7 @@ export default function ArticleEditPage() {
         category,
         coverUrl,
         status,
+        accessLevel,
         audios: audios.map((a, i) => ({
           url: a.url,
           title: a.title.trim() || null,
@@ -263,6 +266,17 @@ export default function ArticleEditPage() {
                   {c}
                 </MenuItem>
               ))}
+            </TextField>
+            <TextField
+              select
+              label="公開レベル"
+              value={accessLevel}
+              onChange={(e) => setAccessLevel(Number(e.target.value))}
+              sx={{ width: 160 }}
+              helperText="VIP限定は無料会員には非公開"
+            >
+              <MenuItem value={0}>無料試読</MenuItem>
+              <MenuItem value={1}>VIP限定</MenuItem>
             </TextField>
           </Stack>
 

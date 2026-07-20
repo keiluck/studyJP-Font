@@ -13,25 +13,11 @@ import List from "@mui/material/List";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
-import PeopleIcon from "@mui/icons-material/People";
-import ArticleIcon from "@mui/icons-material/Article";
-import QuizIcon from "@mui/icons-material/Quiz";
-import CategoryIcon from "@mui/icons-material/Category";
-import MenuBookIcon from "@mui/icons-material/MenuBook";
-import ViewCarouselIcon from "@mui/icons-material/ViewCarousel";
 import AuthGuard from "@/components/AuthGuard";
 import { useAdminAuth } from "@/store/adminAuth";
+import { ADMIN_MENU, visibleAdminMenu } from "@/config/adminMenu";
 
 const DRAWER_WIDTH = 220;
-
-const MENU = [
-  { label: "ユーザー管理", href: "/admin/users", icon: <PeopleIcon /> },
-  { label: "記事管理", href: "/admin/articles", icon: <ArticleIcon /> },
-  { label: "問題管理", href: "/admin/questions", icon: <QuizIcon /> },
-  { label: "分類管理", href: "/admin/categories", icon: <CategoryIcon /> },
-  { label: "英语精读管理", href: "/admin/en-articles", icon: <MenuBookIcon /> },
-  { label: "主図バナー管理", href: "/admin/home-banners", icon: <ViewCarouselIcon /> },
-];
 
 export default function AdminLayout({
   children,
@@ -45,6 +31,19 @@ export default function AdminLayout({
   // ログイン状態は localStorage（クライアント側のみ）から取得するため、マウント後に関連 UI を描画し SSR ハイドレーションの不一致を防ぐ
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  const visibleMenu = visibleAdminMenu(admin?.role);
+
+  // 権限外URLへの直接アクセスをリダイレクトする（UX向上目的。真の防御はバックエンド側）
+  // 遷移先は「/admin」固定ではなく本人のロールで見える最初のメニューにする：
+  // 「/admin」自体は常に /admin/articles へ転送するため、記事管理権限を持たないロール（USER_ADMINなど）だと無限リダイレクトになってしまう
+  useEffect(() => {
+    if (!mounted || !admin || pathname === "/admin/login") return;
+    const matched = ADMIN_MENU.find((item) => pathname.startsWith(item.href));
+    if (matched && !matched.roles.includes(admin.role)) {
+      router.replace(visibleAdminMenu(admin.role)[0]?.href ?? "/admin/login");
+    }
+  }, [mounted, admin, pathname, router]);
 
   const handleLogout = () => {
     clear();
@@ -85,7 +84,7 @@ export default function AdminLayout({
       >
         <Toolbar />
         <List>
-          {MENU.map((item) => (
+          {visibleMenu.map((item) => (
             <ListItemButton
               key={item.href}
               component={Link}

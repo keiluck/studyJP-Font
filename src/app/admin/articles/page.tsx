@@ -200,6 +200,7 @@ function ArticleManage() {
                   <TableCell>タイトル</TableCell>
                   <TableCell>レベル</TableCell>
                   <TableCell>カテゴリ</TableCell>
+                  <TableCell>公開レベル</TableCell>
                   <TableCell>状態</TableCell>
                   <TableCell>更新日時</TableCell>
                   <TableCell align="right">操作</TableCell>
@@ -231,6 +232,14 @@ function ArticleManage() {
                     <TableCell>
                       <Chip
                         size="small"
+                        label={article.accessLevel === 1 ? "VIP限定" : "無料試読"}
+                        color={article.accessLevel === 1 ? "warning" : "default"}
+                        variant={article.accessLevel === 1 ? "filled" : "outlined"}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        size="small"
                         label={article.status === 1 ? "公開済み" : "下書き"}
                         color={article.status === 1 ? "success" : "default"}
                       />
@@ -258,7 +267,7 @@ function ArticleManage() {
                 ))}
                 {result?.list.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} align="center" sx={{ color: "text.secondary", py: 4 }}>
+                    <TableCell colSpan={9} align="center" sx={{ color: "text.secondary", py: 4 }}>
                       記事がありません
                     </TableCell>
                   </TableRow>

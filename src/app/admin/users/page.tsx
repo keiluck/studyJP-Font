@@ -29,12 +29,15 @@ import Stack from "@mui/material/Stack";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
+import Chip from "@mui/material/Chip";
 import {
   createUser,
   deleteUser,
   fetchUsers,
   updateUser,
   updateUserStatus,
+  updateUserVip,
 } from "@/api/admin/user";
 import type { PageResult, UserInfo } from "@/types";
 
@@ -70,6 +73,11 @@ function UserManage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<UserInfo | null>(null);
+
+  // VIP設定Dialog（フェーズ9）
+  const [vipTarget, setVipTarget] = useState<UserInfo | null>(null);
+  const [vipDate, setVipDate] = useState("");
+  const [vipSubmitting, setVipSubmitting] = useState(false);
 
   const {
     register: field,
@@ -173,6 +181,50 @@ function UserManage() {
     }
   };
 
+  const openVip = (user: UserInfo) => {
+    setVipTarget(user);
+    setVipDate(user.vipExpireAt ? user.vipExpireAt.slice(0, 10) : "");
+  };
+
+  const handleSetVip = async () => {
+    if (!vipTarget || !vipDate) return;
+    setVipSubmitting(true);
+    try {
+      const iso = new Date(`${vipDate}T23:59:59`).toISOString();
+      await updateUserVip(vipTarget.id, iso);
+      setResult((r) =>
+        r
+          ? {
+              ...r,
+              list: r.list.map((u) =>
+                u.id === vipTarget.id ? { ...u, vip: true, vipExpireAt: iso } : u
+              ),
+            }
+          : r
+      );
+      setToast("VIPを設定しました");
+      setVipTarget(null);
+    } catch (e) {
+      setToast((e as Error).message);
+    } finally {
+      setVipSubmitting(false);
+    }
+  };
+
+  const handleRevokeVip = async (user: UserInfo) => {
+    try {
+      await updateUserVip(user.id, null);
+      setResult((r) =>
+        r
+          ? { ...r, list: r.list.map((u) => (u.id === user.id ? { ...u, vip: false, vipExpireAt: null } : u)) }
+          : r
+      );
+      setToast("VIPを解除しました");
+    } catch (e) {
+      setToast((e as Error).message);
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleting) return;
     try {
@@ -252,6 +304,7 @@ function UserManage() {
                   <TableCell>ユーザー名</TableCell>
                   <TableCell>メールアドレス</TableCell>
                   <TableCell>状態</TableCell>
+                  <TableCell>VIP</TableCell>
                   <TableCell>登録日時</TableCell>
                   <TableCell align="right">操作</TableCell>
                 </TableRow>
@@ -268,6 +321,20 @@ function UserManage() {
                         checked={user.status === 1}
                         onChange={() => handleToggleStatus(user)}
                       />
+                    </TableCell>
+                    <TableCell>
+                      {user.vip ? (
+                        <Chip
+                          size="small"
+                          icon={<WorkspacePremiumIcon />}
+                          label={`〜${formatTime(user.vipExpireAt || "").slice(0, 10)}`}
+                          color="warning"
+                          onClick={() => openVip(user)}
+                          onDelete={() => handleRevokeVip(user)}
+                        />
+                      ) : (
+                        <Chip size="small" label="無料会員" variant="outlined" onClick={() => openVip(user)} />
+                      )}
                     </TableCell>
                     <TableCell>{formatTime(user.createdAt)}</TableCell>
                     <TableCell align="right">
@@ -287,7 +354,7 @@ function UserManage() {
                 ))}
                 {result?.list.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ color: "text.secondary", py: 4 }}>
+                    <TableCell colSpan={7} align="center" sx={{ color: "text.secondary", py: 4 }}>
                       ユーザーがいません
                     </TableCell>
                   </TableRow>
@@ -366,6 +433,31 @@ function UserManage() {
           <Button onClick={() => setDeleting(null)}>キャンセル</Button>
           <Button color="error" variant="contained" onClick={handleDelete}>
             削除
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* VIP設定Dialog（フェーズ9） */}
+      <Dialog open={!!vipTarget} onClose={() => setVipTarget(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>VIP設定 · {vipTarget?.username}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <DialogContentText>
+              指定した日付の23:59までVIP会員になります。既存のVIP期限を上書きします。
+            </DialogContentText>
+            <TextField
+              label="VIP期限"
+              type="date"
+              value={vipDate}
+              onChange={(e) => setVipDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setVipTarget(null)}>キャンセル</Button>
+          <Button variant="contained" disabled={!vipDate || vipSubmitting} onClick={handleSetVip}>
+            {vipSubmitting ? "保存中…" : "設定"}
           </Button>
         </DialogActions>
       </Dialog>

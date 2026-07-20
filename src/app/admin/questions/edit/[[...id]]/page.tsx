@@ -37,6 +37,7 @@ interface QuestionFormValues {
   explanation: string;
   category: string;
   status: 0 | 1;
+  accessLevel: 0 | 1;
   options: OptionFormValue[];
 }
 
@@ -74,6 +75,7 @@ export default function QuestionEditPage() {
       explanation: "",
       category: "",
       status: 0,
+      accessLevel: 0,
       options: [emptyOption(), emptyOption()],
     },
   });
@@ -94,6 +96,7 @@ export default function QuestionEditPage() {
         explanation: detail.explanation || "",
         category: detail.category || "",
         status: detail.status as 0 | 1,
+        accessLevel: (detail.accessLevel ?? 0) as 0 | 1,
         options: detail.options.map((o) => ({ content: o.content, correct: o.correct })),
       });
     } catch (err) {
@@ -144,6 +147,7 @@ export default function QuestionEditPage() {
         explanation: values.explanation.trim() || undefined,
         category: values.category.trim() || undefined,
         status: values.status,
+        accessLevel: values.accessLevel,
         options: values.options.map((o) => ({ content: o.content.trim(), correct: o.correct })),
       };
       if (id) await updateQuestion(id, payload);
@@ -209,6 +213,16 @@ export default function QuestionEditPage() {
                   <TextField {...field} select label="状態" sx={{ width: 160 }}>
                     <MenuItem value={0}>下書き</MenuItem>
                     <MenuItem value={1}>公開済み</MenuItem>
+                  </TextField>
+                )}
+              />
+              <Controller
+                name="accessLevel"
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} select label="公開レベル" sx={{ width: 160 }}>
+                    <MenuItem value={0}>無料試読</MenuItem>
+                    <MenuItem value={1}>VIP限定</MenuItem>
                   </TextField>
                 )}
               />

@@ -18,7 +18,7 @@ interface EnWordSheetProps {
 
 /**
  * 単語表ボトムシート。2つの入口（底部「単語」ボタン／句中の難語クリック）が同じコンポーネントを開く。
- * activeWordId が指定されている場合は該当カードまで自動スクロールし「刚点击」バッジを表示する。
+ * activeWordId が指定されている場合は該当カードまで自動スクロールし「今クリックした」バッジを表示する。
  */
 export default function EnWordSheet({ open, onClose, words, activeWordId }: EnWordSheetProps) {
   const cardRefs = useRef<Record<number, HTMLDivElement | null>>({});
@@ -52,7 +52,7 @@ export default function EnWordSheet({ open, onClose, words, activeWordId }: EnWo
       <Box sx={{ width: 36, height: 4, borderRadius: 2, bgcolor: "#ddd", mx: "auto", mt: 1.2, mb: 0.5 }} />
       <Box sx={{ display: "flex", alignItems: "center", px: 2, pt: 1, pb: 1, borderBottom: "1px solid #eee" }}>
         <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 700, fontSize: 17 }}>
-          单词
+          単語
         </Typography>
         <IconButton onClick={onClose} size="small">
           <CloseIcon fontSize="small" />
@@ -62,21 +62,21 @@ export default function EnWordSheet({ open, onClose, words, activeWordId }: EnWo
         <Typography variant="caption" color="text.secondary">
           {activeWord ? (
             <>
-              来自句中点击 · <b style={{ color: "#2b5f96" }}>{activeWord.word}</b>
+              文中クリック由来 · <b style={{ color: "#2b5f96" }}>{activeWord.word}</b>
             </>
           ) : (
-            "本文单词"
+            "本文の単語"
           )}
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          共 {words.length} 词
+          全 {words.length} 語
         </Typography>
       </Box>
 
       <Box sx={{ overflowY: "auto", flex: 1, pb: 2 }}>
         {words.length === 0 ? (
           <Typography color="text.secondary" align="center" sx={{ py: 6 }}>
-            这篇文章还没有单词数据
+            この記事にはまだ単語データがありません
           </Typography>
         ) : (
           words.map((w) => {
@@ -100,7 +100,7 @@ export default function EnWordSheet({ open, onClose, words, activeWordId }: EnWo
               >
                 {active && (
                   <Chip
-                    label="刚点击"
+                    label="今クリックした"
                     size="small"
                     variant="outlined"
                     sx={{

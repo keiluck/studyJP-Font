@@ -16,6 +16,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import HeadphonesIcon from "@mui/icons-material/Headphones";
+import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 import { fetchArticles } from "@/api/article";
 import { fetchCategories } from "@/api/category";
 import type { ArticleListItem, PageResult } from "@/types";
@@ -157,30 +158,41 @@ function ArticleList() {
                     sx={{ height: "100%" }}
                     onClick={() => router.push(`/articles/${article.id}`)}
                   >
-                    {article.coverUrl ? (
-                      <Box
-                        component="img"
-                        src={article.coverUrl}
-                        alt={article.title}
-                        sx={{ width: "100%", height: 140, objectFit: "cover" }}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <Box
-                        sx={{
-                          height: 140,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          background: "linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%)",
-                          color: "#5c6bc0",
-                        }}
-                      >
-                        <HeadphonesIcon sx={{ fontSize: 48 }} />
-                      </Box>
-                    )}
+                    <Box sx={{ position: "relative" }}>
+                      {article.coverUrl ? (
+                        <Box
+                          component="img"
+                          src={article.coverUrl}
+                          alt={article.title}
+                          sx={{ width: "100%", height: 140, objectFit: "cover" }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <Box
+                          sx={{
+                            height: 140,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            background: "linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%)",
+                            color: "#5c6bc0",
+                          }}
+                        >
+                          <HeadphonesIcon sx={{ fontSize: 48 }} />
+                        </Box>
+                      )}
+                      {article.accessLevel === 1 && (
+                        <Chip
+                          icon={<WorkspacePremiumIcon />}
+                          label="VIP"
+                          color="warning"
+                          size="small"
+                          sx={{ position: "absolute", top: 8, right: 8 }}
+                        />
+                      )}
+                    </Box>
                     <CardContent>
                       <Typography
                         variant="subtitle1"
