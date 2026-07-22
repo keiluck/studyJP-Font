@@ -10,6 +10,7 @@ interface SentenceItemProps {
   rubyWords?: RubyWord[]; // 分かち書き＋振り仮名注記。空の場合は文全体を text としてそのまま描画
   translation: string;
   isActive: boolean; // 現在再生中の文かどうか（ハイライト表示）
+  activeWordIndex?: number | null; // 文内で現在読み上げ中と推定される単語インデックス（跟読ハイライト用）
   showRuby: boolean; // 振り仮名の表示/非表示
   translationMode: TranslationMode;
   onClick?: () => void; // 文をクリックした際のコールバック（該当箇所から再生）
@@ -28,21 +29,30 @@ export function renderRubyWords(
   text: string,
   rubyWords: RubyWord[] | undefined,
   showRuby: boolean,
-  withColors: boolean
+  withColors: boolean,
+  activeWordIndex?: number | null
 ) {
   if (!rubyWords || rubyWords.length === 0) return text;
   return rubyWords.map((w, idx) => {
+    const isWordActive = activeWordIndex != null && activeWordIndex === idx;
     const wordStyle: React.CSSProperties = {
       backgroundColor:
         withColors && w.wordType ? typeColor[w.wordType] : "transparent",
       borderRadius: 4,
-      padding: "1px 4px",
+      padding: "1px 2px",
+      margin:"10px 2px",
       display: "inline-block",
+      // 跟読ハイライト：内側の border は常に透明（レイアウト確保用）、外側の outline に色を付けて
+      // outlineOffset で単語から離すことで「内枠透明・外枠有色」の二重枠にする
+      border: "2px solid transparent",
+      outline: isWordActive ? "2px solid #2563eb" : "2px solid transparent",
+      outlineOffset: "2px",
+      transition: "outline-color 0.2s",
     };
     return w.ruby && showRuby ? (
       <ruby key={idx} style={{ marginRight: 2 }}>
         <span style={wordStyle}>{w.text}</span>
-        <rt style={{ fontSize: 10, color: "#888" }}>{w.ruby}</rt>
+        <rt style={{ fontSize: 10, color: "#888", marginBottom: 5 }}>{w.ruby}</rt>
       </ruby>
     ) : (
       <span key={idx} style={wordStyle}>
@@ -57,6 +67,7 @@ export default function SentenceItem({
   rubyWords,
   translation,
   isActive,
+  activeWordIndex,
   showRuby,
   translationMode,
   onClick,
@@ -90,13 +101,13 @@ export default function SentenceItem({
         sx={{
           m: 0,
           fontSize: 18,
-          // 振り仮名表示時は行の高さを広げ、<rt> 用のスペースを確保
-          lineHeight: showRuby && rubyWords?.length ? 2.2 : 1.8,
+          // 振り仮名表示時は行の高さを広げ、<rt> 用のスペースを確保（単語の二重枠のぶんも見込む）
+          lineHeight: showRuby && rubyWords?.length ? 1.8 : 1.4,
           wordBreak: "break-all",
           color: "#1a1a2e",
         }}
       >
-        {renderRubyWords(text, rubyWords, showRuby, true)}
+        {renderRubyWords(text, rubyWords, showRuby, true, activeWordIndex)}
       </Box>
       {/* 翻訳エリア：翻訳文を表示（クリックで非表示）またはプレースホルダーを表示（クリックで表示）。hidden モードまたは翻訳がない場合は描画しない */}
       {translationMode !== "hidden" &&
@@ -124,7 +135,7 @@ export default function SentenceItem({
               mt: 0.5,
               fontSize: 13,
               color: "#bbb",
-              lineHeight: 1.5,
+              lineHeight: 2,
               textAlign: "center",
             }}
           >

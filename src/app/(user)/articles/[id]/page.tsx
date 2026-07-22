@@ -16,7 +16,12 @@ import Link from "next/link";
 import AudioPlayer, { TranslationMode } from "@/components/AudioPlayer";
 import SentenceItem, { renderRubyWords } from "@/components/SentenceItem";
 import { fetchArticleDetail } from "@/api/article";
-import { indexAtFraction, parseReaderSentences, startFractionOf } from "@/lib/articleContent";
+import {
+  activeWordIndexInSentence,
+  indexAtFraction,
+  parseReaderSentences,
+  startFractionOf,
+} from "@/lib/articleContent";
 import { annotateTexts } from "@/lib/furigana";
 import type { ArticleDetail, RubyWord } from "@/types";
 
@@ -56,6 +61,7 @@ export default function ArticleReaderPage() {
   const [showText, setShowText] = useState(true);
   const [audioIndex, setAudioIndex] = useState(0); // 複数音声がある場合の現在のトラック
   const [activeIndex, setActiveIndex] = useState<number | null>(null); // 現在読み上げ中の文（概算）
+  const [activeWordIndex, setActiveWordIndex] = useState<number | null>(null); // 文内で現在読み上げ中の単語（概算、跟読ハイライト用）
 
   const activeRef = useRef<HTMLDivElement | null>(null);
   const listeningModeRef = useRef(listeningMode);
@@ -95,6 +101,7 @@ export default function ArticleReaderPage() {
   const [ruby, setRuby] = useState<RubyWord[][] | null>(null);
   useEffect(() => {
     setRuby(null);
+    setActiveWordIndex(null);
     if (unitTexts.length === 0) return;
     let cancelled = false;
     annotateTexts(unitTexts)
@@ -125,8 +132,16 @@ export default function ArticleReaderPage() {
       const idx = indexAtFraction(unitTexts, fraction);
       setActiveIndex(idx);
       if (listeningModeRef.current) setListeningIndex(idx);
+
+      const words = ruby?.[idx];
+      if (words && words.length > 0) {
+        const wIdx = activeWordIndexInSentence(unitTexts, idx, words.map((w) => w.text), fraction);
+        setActiveWordIndex(wIdx >= 0 ? wIdx : null);
+      } else {
+        setActiveWordIndex(null);
+      }
     },
-    [unitTexts]
+    [unitTexts, ruby]
   );
 
   // ハイライトされる文が変わったら画面中央にスクロールする（通常モード）
@@ -135,6 +150,9 @@ export default function ArticleReaderPage() {
       activeRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [activeIndex, listeningMode]);
+
+  // 再生終了：単語ハイライトの枠を消す（読み終えた後まで枠が残らないように）
+  const handleEnded = useCallback(() => setActiveWordIndex(null), []);
 
   /** idx 番目の文の概算開始位置にジャンプして再生する（通常モードの文クリック、リスニングモードの前/次の文で共用） */
   const jumpToUnit = (idx: number) => {
@@ -199,7 +217,29 @@ export default function ArticleReaderPage() {
 
   return (
     <Box sx={{ maxWidth: 720, mx: "auto", pb: currentAudio ? "220px" : 4 }}>
-      {/* カバー画像＋タイトル＋日付 */}
+      {/* 一覧ページへ戻るボタン（右上） */}
+      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
+        <Button
+          component={Link}
+          href="/articles"
+          size="small"
+          startIcon={<ArrowBackIosNewIcon sx={{ fontSize: 14 }} />}
+          sx={{ color: "text.secondary" }}
+        >
+          コース一覧に戻る
+        </Button>
+      </Box>
+      {/* タイトル＋カテゴリ／日付＋カバー画像 */}
+      <Typography variant="h5" sx={{ fontWeight: 700, mb: 1, textAlign: "center" }}>
+        {article.title}
+      </Typography>
+      <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ mb: 2 }}>
+        <Chip size="small" label={article.level} color="primary" variant="outlined" />
+        <Chip size="small" label={article.category} variant="outlined" />
+        <Typography variant="body2" color="text.secondary">
+          {formatDate(article.createdAt)}
+        </Typography>
+      </Stack>
       {article.coverUrl && (
         <Box
           component="img"
@@ -211,16 +251,6 @@ export default function ArticleReaderPage() {
           }}
         />
       )}
-      <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-        {article.title}
-      </Typography>
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-        <Chip size="small" label={article.level} color="primary" variant="outlined" />
-        <Chip size="small" label={article.category} variant="outlined" />
-        <Typography variant="body2" color="text.secondary">
-          {formatDate(article.createdAt)}
-        </Typography>
-      </Stack>
 
       {/* 複数音声がある場合のトラック切り替え */}
       {audios.length > 1 && (
@@ -245,6 +275,7 @@ export default function ArticleReaderPage() {
               rubyWords={ruby?.[idx]}
               translation={u.translation}
               isActive={activeIndex === idx}
+              activeWordIndex={activeIndex === idx ? activeWordIndex : null}
               showRuby={showRuby}
               translationMode={translationMode}
               onClick={currentAudio ? () => jumpToUnit(idx) : undefined}
@@ -310,12 +341,18 @@ export default function ArticleReaderPage() {
                     sx={{
                       m: 0,
                       fontSize: 22,
-                      lineHeight: showRuby && ruby?.[listeningIndex]?.length ? 2.4 : 2,
+                      lineHeight: showRuby && ruby?.[listeningIndex]?.length ? 1.8 : 1.4,
                       wordBreak: "break-all",
                       color: "#1a1a2e",
                     }}
                   >
-                    {renderRubyWords(listeningSentence.text, ruby?.[listeningIndex], showRuby, false)}
+                    {renderRubyWords(
+                      listeningSentence.text,
+                      ruby?.[listeningIndex],
+                      showRuby,
+                      false,
+                      listeningIndex === activeIndex ? activeWordIndex : null
+                    )}
                   </Box>
                 ) : (
                   <Box
@@ -345,6 +382,7 @@ export default function ArticleReaderPage() {
           key={currentAudio.url}
           src={currentAudio.url}
           onTimeUpdate={handleTimeUpdate}
+          onEnded={handleEnded}
           speed={speed}
           onSpeedChange={setSpeed}
           showRuby={showRuby}

@@ -27,6 +27,7 @@ interface AudioPlayerProps {
   src: string;
   onTimeUpdate?: (currentTime: number) => void; // timeupdate のたびに通知し、文のハイライトを駆動する
   onPlayingChange?: (isPlaying: boolean) => void;
+  onEnded?: () => void; // 再生終了時に通知し、単語ハイライトの解除などに使う
   // ツールバー（制御コンポーネント。状態はページ側が保持する）
   speed: number;
   onSpeedChange: (speed: number) => void;
@@ -72,6 +73,7 @@ export default function AudioPlayer({
   src,
   onTimeUpdate,
   onPlayingChange,
+  onEnded,
   speed,
   onSpeedChange,
   showRuby,
@@ -114,21 +116,25 @@ export default function AudioPlayer({
       onPlayingChange?.(false);
     };
     const onError = () => setLoadError(true);
+    const onEndedInternal = () => {
+      onPause();
+      onEnded?.();
+    };
     audio.addEventListener("timeupdate", onTime);
     audio.addEventListener("loadedmetadata", onLoaded);
     audio.addEventListener("play", onPlay);
     audio.addEventListener("pause", onPause);
-    audio.addEventListener("ended", onPause);
+    audio.addEventListener("ended", onEndedInternal);
     audio.addEventListener("error", onError);
     return () => {
       audio.removeEventListener("timeupdate", onTime);
       audio.removeEventListener("loadedmetadata", onLoaded);
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
-      audio.removeEventListener("ended", onPause);
+      audio.removeEventListener("ended", onEndedInternal);
       audio.removeEventListener("error", onError);
     };
-  }, [onTimeUpdate, onPlayingChange]);
+  }, [onTimeUpdate, onPlayingChange, onEnded]);
 
   // 再生速度変更：speed が変化したら playbackRate に直接反映する
   useEffect(() => {

@@ -138,3 +138,22 @@ export function startFractionOf(texts: string[], index: number): number {
   for (let i = 0; i < Math.min(index, texts.length); i++) acc += texts[i].length;
   return acc / total;
 }
+
+/**
+ * 文内の単語ハイライト用：全体の再生進捗 fraction を「この文が占める範囲」に再正規化し、
+ * indexAtFraction と同じアルゴリズムを語レベルに適用してアクティブな単語インデックスを概算する。
+ */
+export function activeWordIndexInSentence(
+  unitTexts: string[],
+  sentenceIndex: number,
+  wordTexts: string[],
+  fraction: number
+): number {
+  if (wordTexts.length === 0) return -1;
+  const start = startFractionOf(unitTexts, sentenceIndex);
+  const end = startFractionOf(unitTexts, sentenceIndex + 1);
+  const span = end - start;
+  if (span <= 0) return 0;
+  const local = Math.min(Math.max((fraction - start) / span, 0), 0.9999);
+  return indexAtFraction(wordTexts, local);
+}
