@@ -175,3 +175,78 @@ export function matchWordsInSentence(text: string, words: EnWordItem[]): EnSente
   if (cursor < text.length) segments.push({ text: text.slice(cursor) });
   return segments;
 }
+
+/**
+ * 跟読ハイライト（単語追従、日本語版 `/articles/[id]` の跟読機能の移植）用のトークン。
+ * 英語には kuromoji のような形態素解析トークンが無いため、アルファベット/数字の連続（＝1単語）と
+ * それ以外（空白・記号）に正規表現で分割する。`wordIndex` は「単語」トークンにのみ振られる
+ * 0始まりの連番（跟読ハイライトの対象インデックス）。`vocabWordId` は既存の `matchWordsInSentence`
+ * によるセグメントを引き継いだもので、句中難語ハイライトのクリック判定に使う。
+ */
+export interface EnWordToken {
+  text: string;
+  wordIndex: number | null; // 空白・記号トークンは null（跟読ハイライトの対象外）
+  vocabWordId: number | null;
+}
+
+const WORD_TOKEN_RE = /[A-Za-z0-9']+|[^A-Za-z0-9']+/g;
+
+/** 文をアルファベット/数字の連続とそれ以外に分割する（跟読ハイライトの単語カウント用の下請け関数） */
+function splitWordTokens(text: string): { text: string; isWord: boolean }[] {
+  const parts = text.match(WORD_TOKEN_RE) || [];
+  return parts.map((t) => ({ text: t, isWord: /[A-Za-z0-9]/.test(t) }));
+}
+
+/** 文内の「単語」トークンのテキストのみを順番に並べた配列（`activeWordIndexInSentence` の `wordTexts` に渡す） */
+export function wordTextsOfSentence(text: string): string[] {
+  return splitWordTokens(text)
+    .filter((t) => t.isWord)
+    .map((t) => t.text);
+}
+
+/**
+ * 文を「句中難語ハイライト」＋「跟読ハイライト」の両方に使えるトークン列に変換する。
+ * 既存の `matchWordsInSentence`（文字範囲ベースの難語マッチ）はそのまま再利用し、
+ * 各セグメントをさらに単語/非単語に分割することで、難語ハイライトの実装を書き換えずに
+ * 単語単位の跟読ハイライトを両立させる。
+ */
+export function tokenizeEnglishSentence(text: string, words: EnWordItem[]): EnWordToken[] {
+  const segments = matchWordsInSentence(text, words);
+  const tokens: EnWordToken[] = [];
+  let wordCounter = 0;
+  for (const seg of segments) {
+    // セグメント内の空白/記号トークンにも同じ vocabWordId を引き継ぐ（"environmentally friendly" のような
+    // 複合語の内部の空白がクリック領域から外れて、単語ごとに別々のマーカー/クリック領域に分裂しないようにする）。
+    // 単語カウント（wordIndex、跟読ハイライトの対象）は isWord のトークンのみに振る。
+    for (const sub of splitWordTokens(seg.text)) {
+      tokens.push({
+        text: sub.text,
+        wordIndex: sub.isWord ? wordCounter : null,
+        vocabWordId: seg.wordId ?? null,
+      });
+      if (sub.isWord) wordCounter++;
+    }
+  }
+  return tokens;
+}
+
+/**
+ * 文内の単語ハイライト用：全体の再生進捗 fraction を「この文が占める範囲」に再正規化し、
+ * indexAtFraction と同じアルゴリズムを語レベルに適用してアクティブな単語インデックスを概算する。
+ * 日本語版 `lib/articleContent.ts` の同名関数と同じロジックだが、英語モジュール専用に独立実装する
+ * （日本語版とは分文規則・トークン化方式が異なるため import せず複製する）。
+ */
+export function activeWordIndexInSentence(
+  unitTexts: string[],
+  sentenceIndex: number,
+  wordTexts: string[],
+  fraction: number
+): number {
+  if (wordTexts.length === 0) return -1;
+  const start = startFractionOf(unitTexts, sentenceIndex);
+  const end = startFractionOf(unitTexts, sentenceIndex + 1);
+  const span = end - start;
+  if (span <= 0) return 0;
+  const local = Math.min(Math.max((fraction - start) / span, 0), 0.9999);
+  return indexAtFraction(wordTexts, local);
+}

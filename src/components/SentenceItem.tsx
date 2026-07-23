@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Box from "@mui/material/Box";
-import type { RubyWord } from "@/types";
+import type { RubyWord, WordItem } from "@/types";
 import type { TranslationMode } from "./AudioPlayer";
+import { matchVocabInSentence } from "@/lib/articleContent";
 
 interface SentenceItemProps {
   text: string; // 日本語原文
@@ -14,6 +15,8 @@ interface SentenceItemProps {
   showRuby: boolean; // 振り仮名の表示/非表示
   translationMode: TranslationMode;
   onClick?: () => void; // 文をクリックした際のコールバック（該当箇所から再生）
+  words?: WordItem[]; // 単語表（記事内の全件）。テキスト一致するものだけをこの文でマーカー表示する
+  onWordClick?: (wordId: number) => void; // 単語表に登録された単語をクリックした際のコールバック（単語表ボトムシートを開く）
 }
 
 /** 品詞ごとの背景色（常時表示）：名詞=オレンジ / 動詞=緑 / 形容詞=ピンク / 外来語=青 */
@@ -62,6 +65,67 @@ export function renderRubyWords(
   });
 }
 
+/**
+ * `renderRubyWords` に単語表マーカーを重ねて描画する。マッチは kuromoji トークン単位で行う
+ * （`lib/articleContent.ts` の `matchVocabInSentence`。日本語には英語のような単語境界が無いため、
+ * トークンの文字オフセットで単語表の見出し語と照合し、連続するトークンをグループ化する）。
+ * マーカーは文がアクティブかどうかに関わらず常時表示する（既存の品詞背景色と同じ「常時表示」の考え方）。
+ * `renderRubyWords` 自体のシグネチャは変更せず、グループ単位で呼び出すだけに留める
+ * （集中リスニングモードなど既存の呼び出し元に影響を与えないため）。
+ */
+export function renderVocabRubyWords(
+  text: string,
+  rubyWords: RubyWord[] | undefined,
+  words: WordItem[] | undefined,
+  showRuby: boolean,
+  withColors: boolean,
+  activeWordIndex: number | null | undefined,
+  onWordClick?: (wordId: number) => void
+) {
+  if (!rubyWords || rubyWords.length === 0) return text;
+  if (!words || words.length === 0 || !onWordClick) {
+    return renderRubyWords(text, rubyWords, showRuby, withColors, activeWordIndex);
+  }
+
+  const groups = matchVocabInSentence(rubyWords, words);
+  return groups.map((g, gi) => {
+    const localActiveIndex =
+      activeWordIndex != null ? activeWordIndex - g.startIndex : activeWordIndex;
+    const rendered = renderRubyWords(text, g.words, showRuby, withColors, localActiveIndex);
+    if (g.wordId == null) {
+      return <span key={gi}>{rendered}</span>;
+    }
+    return (
+      <Box
+        key={gi}
+        component="span"
+        onClick={(e) => {
+          e.stopPropagation(); // 文全体のジャンプ再生を誘発しない
+          onWordClick(g.wordId as number);
+        }}
+        sx={{ position: "relative", display: "inline-block", cursor: "pointer" }}
+      >
+        {rendered}
+        {/* 単語表マーカー：左上の小さな丸印。isActive の影響を受けず常に表示する */}
+        <Box
+          component="span"
+          aria-hidden
+          sx={{
+            position: "absolute",
+            top: -3,
+            left: -3,
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            bgcolor: "#2b5f96",
+            border: "1px solid #fff",
+          }}
+        />
+      </Box>
+    );
+  });
+}
+
 export default function SentenceItem({
   text,
   rubyWords,
@@ -71,6 +135,8 @@ export default function SentenceItem({
   showRuby,
   translationMode,
   onClick,
+  words,
+  onWordClick,
 }: SentenceItemProps) {
   // この段落の翻訳表示/非表示の個別スイッチ：null＝モードのデフォルトに従う（always は表示 / click は非表示）
   // 翻訳文をクリックすると非表示に、プレースホルダー（クリックして翻訳を表示する）をクリックすると再表示
@@ -107,7 +173,7 @@ export default function SentenceItem({
           color: "#1a1a2e",
         }}
       >
-        {renderRubyWords(text, rubyWords, showRuby, true, activeWordIndex)}
+        {renderVocabRubyWords(text, rubyWords, words, showRuby, true, activeWordIndex, onWordClick)}
       </Box>
       {/* 翻訳エリア：翻訳文を表示（クリックで非表示）またはプレースホルダーを表示（クリックで表示）。hidden モードまたは翻訳がない場合は描画しない */}
       {translationMode !== "hidden" &&

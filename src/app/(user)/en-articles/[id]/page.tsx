@@ -14,10 +14,16 @@ import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 import Link from "next/link";
 import EnAudioPlayer, { EnTranslationMode } from "@/components/EnArticle/EnAudioPlayer";
-import EnSentenceItem from "@/components/EnArticle/EnSentenceItem";
+import EnSentenceItem, { renderEnTokens } from "@/components/EnArticle/EnSentenceItem";
 import EnWordSheet from "@/components/EnArticle/EnWordSheet";
 import { fetchEnArticleDetail } from "@/api/enArticle";
-import { indexAtFraction, parseEnglishSentences, startFractionOf } from "@/lib/enArticleContent";
+import {
+  activeWordIndexInSentence,
+  indexAtFraction,
+  parseEnglishSentences,
+  startFractionOf,
+  wordTextsOfSentence,
+} from "@/lib/enArticleContent";
 import type { EnArticleDetail } from "@/types/enArticle";
 
 const formatDate = (createdAt: string) => {
@@ -52,6 +58,7 @@ export default function EnArticleReaderPage() {
   const [showText, setShowText] = useState(true);
   const [audioIndex, setAudioIndex] = useState(0);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [activeWordIndex, setActiveWordIndex] = useState<number | null>(null); // 文内で現在読み上げ中と推定される単語（跟読ハイライト用）
 
   // 単語表ボトムシート：sheetOpen で開閉、activeWordId は句中クリック（入口B）のときのみ設定される
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -107,9 +114,16 @@ export default function EnArticleReaderPage() {
       const idx = indexAtFraction(unitTexts, fraction);
       setActiveIndex(idx);
       if (listeningModeRef.current) setListeningIndex(idx);
+
+      const wordTexts = wordTextsOfSentence(unitTexts[idx] ?? "");
+      const wIdx = activeWordIndexInSentence(unitTexts, idx, wordTexts, fraction);
+      setActiveWordIndex(wIdx >= 0 ? wIdx : null);
     },
     [unitTexts]
   );
+
+  // 再生終了：単語ハイライトの枠を消す（読み終えた後まで枠が残らないように）
+  const handleEnded = useCallback(() => setActiveWordIndex(null), []);
 
   useEffect(() => {
     if (!listeningMode && activeRef.current) {
@@ -232,6 +246,7 @@ export default function EnArticleReaderPage() {
               words={words}
               translation={u.translation}
               isActive={activeIndex === idx}
+              activeWordIndex={activeIndex === idx ? activeWordIndex : null}
               translationMode={translationMode}
               onWordClick={openWordSheetFromSentence}
             />
@@ -280,7 +295,13 @@ export default function EnArticleReaderPage() {
               {listeningSentence &&
                 (showText ? (
                   <Box component="p" sx={{ m: 0, fontSize: 20, lineHeight: 2, color: "#1a1a2e" }}>
-                    {listeningSentence.text}
+                    {renderEnTokens(
+                      listeningSentence.text,
+                      words,
+                      listeningIndex === activeIndex,
+                      listeningIndex === activeIndex ? activeWordIndex : null,
+                      openWordSheetFromSentence
+                    )}
                   </Box>
                 ) : (
                   <Box
@@ -308,6 +329,7 @@ export default function EnArticleReaderPage() {
           key={currentAudio.url}
           src={currentAudio.url}
           onTimeUpdate={handleTimeUpdate}
+          onEnded={handleEnded}
           speed={speed}
           onSpeedChange={setSpeed}
           onOpenListening={() => setListeningMode(true)}

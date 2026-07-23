@@ -10,6 +10,8 @@
  * - バックエンドに文単位のタイムラインがまだ無いため、音声と文の同期はバックエンドの対応データが揃い次第有効化する。
  */
 
+import type { RubyWord } from "@/types";
+
 /** 読書ビューの表示単位：日本語の1文＋任意の中国語訳（訳文は文の下に表示） */
 export interface ReaderSentence {
   id: string;
@@ -156,4 +158,92 @@ export function activeWordIndexInSentence(
   if (span <= 0) return 0;
   const local = Math.min(Math.max((fraction - start) / span, 0), 0.9999);
   return indexAtFraction(wordTexts, local);
+}
+
+/**
+ * 単語表（生词表）機能：kuromoji で分かち書きしたトークン列（RubyWord[]）に対して
+ * `words[]`（記事内の全件、`sentenceIndex` による絞り込みはしない——理由は英語モジュールと同じで、
+ * 管理画面の句序号入力ミスでその文の単語が丸ごと非表示になる不具合を避けるため）をマッチさせ、
+ * 連続するトークンをグループ化する。日本語には英語のような空白区切りが無く regex の `\b` 単語境界が
+ * 使えないため、英語版 `matchWordsInSentence`（正規表現の単語境界マッチ）とは異なり、
+ * トークンの文字オフセットを使った「文字範囲の重なり」判定でマッチさせる。
+ */
+export interface VocabSegmentGroup {
+  words: RubyWord[]; // このグループに含まれる連続したトークン（1個以上）
+  wordId: number | null; // 単語表の該当 id。null はハイライト対象外（地の文のまま描画）
+  startIndex: number; // rubyWords 全体における、このグループの先頭トークンのインデックス（跟読ハイライトの index 補正に使用）
+}
+
+interface VocabCandidate {
+  id: number;
+  word: string;
+}
+
+/**
+ * rubyWords（1文ぶんのトークン列）と単語表候補から、トークンをグループ化してハイライト対象を決定する。
+ * - 長い見出し語を優先してマッチさせる（短い語が先に一部を占有して長い語のマッチを妨げないようにする）。
+ * - マッチした文字範囲がトークン境界の途中にかかる場合は、重なるトークンをまるごと占有する
+ *   （ルビ注記はトークン単位のため、トークンの一部だけを切り出すことはしない）。
+ * - 既に占有された範囲と重なる候補はスキップする（同じ文で複数の単語が同じ箇所を取り合わない）。
+ */
+export function matchVocabInSentence(
+  rubyWords: RubyWord[] | undefined,
+  words: { id: number; word: string }[]
+): VocabSegmentGroup[] {
+  if (!rubyWords || rubyWords.length === 0) return [];
+
+  const offsets: number[] = [];
+  let acc = 0;
+  for (const w of rubyWords) {
+    offsets.push(acc);
+    acc += w.text.length;
+  }
+  const fullText = rubyWords.map((w) => w.text).join("");
+
+  const candidates: VocabCandidate[] = words
+    .filter((w) => w.word && w.word.trim())
+    .map((w) => ({ id: w.id, word: w.word.trim() }))
+    .sort((a, b) => b.word.length - a.word.length); // 長い見出し語を優先
+
+  const claimed: (number | null)[] = new Array(rubyWords.length).fill(null);
+
+  for (const c of candidates) {
+    const idx = fullText.indexOf(c.word);
+    if (idx === -1) continue;
+    const end = idx + c.word.length;
+
+    let startTok = -1;
+    let endTok = -1;
+    for (let i = 0; i < rubyWords.length; i++) {
+      const tokStart = offsets[i];
+      const tokEnd = tokStart + rubyWords[i].text.length;
+      if (tokStart < end && tokEnd > idx) {
+        if (startTok === -1) startTok = i;
+        endTok = i;
+      }
+    }
+    if (startTok === -1) continue;
+
+    let conflict = false;
+    for (let i = startTok; i <= endTok; i++) {
+      if (claimed[i] != null) {
+        conflict = true;
+        break;
+      }
+    }
+    if (conflict) continue;
+
+    for (let i = startTok; i <= endTok; i++) claimed[i] = c.id;
+  }
+
+  const groups: VocabSegmentGroup[] = [];
+  let i = 0;
+  while (i < rubyWords.length) {
+    const id = claimed[i];
+    let j = i;
+    while (j + 1 < rubyWords.length && claimed[j + 1] === id) j++;
+    groups.push({ words: rubyWords.slice(i, j + 1), wordId: id, startIndex: i });
+    i = j + 1;
+  }
+  return groups;
 }

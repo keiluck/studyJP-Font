@@ -86,6 +86,7 @@ export interface ArticleDetail extends ArticleListItem {
   status: number; // 0=下書き 1=公開済み
   updatedAt: string;
   audios: AudioItem[]; // 複数音声。sortOrder の昇順で表示
+  words: WordItem[]; // 単語表（sortOrder 順の全件）。句中ハイライトと単語表ボトムシートの両方をこの1レスポンスで賄う
 }
 
 /** 音声（バックエンドの AudioItem） */
@@ -93,6 +94,25 @@ export interface AudioItem {
   id: number;
   url: string;
   title: string | null;
+  sortOrder: number;
+}
+
+/**
+ * 単語表の1件（バックエンドの WordItem）。日本語版は kuromoji で分かち書きした
+ * トークン列に対して `word`（本文中の表記そのまま、漢字表記）の完全一致でマッチする
+ * （lib/articleContent.ts の `matchVocabInSentence`）。`sentenceIndex` は管理画面の
+ * 記録用途のみで、ハイライトのマッチには使用しない（英語モジュールと同じ理由：
+ * 句序号の入力ミスでその文の単語が丸ごと非表示になる不具合を避けるため）。
+ */
+export interface WordItem {
+  id: number;
+  sentenceIndex: number;
+  word: string; // 見出し語（本文中の表記そのまま。漢字表記があれば漢字、無ければ仮名表記）
+  reading: string | null; // ふりがな（ひらがな読み）
+  partOfSpeech: string | null; // 品詞（自由入力。例：名詞/動詞/形容詞/副詞）
+  meaningZh: string; // 中国語釈義
+  exampleJa: string | null; // 例文（日本語）
+  exampleZh: string | null; // 例文の中国語訳
   sortOrder: number;
 }
 
@@ -128,6 +148,7 @@ export interface AdminArticleDetail extends AdminArticleListItem {
   content: string; // 日本語本文のリッチテキスト HTML
   translation: string | null; // 中国語訳のリッチテキスト HTML。段落は本文と一対一対応
   audios: AudioItem[];
+  words: WordItem[];
 }
 
 /** 記事保存リクエスト（バックエンドの ArticleSaveRequest。新規作成・編集共用） */
@@ -141,4 +162,14 @@ export interface ArticleSavePayload {
   status: number; // 0=下書き 1=公開
   accessLevel: number; // 0=無料試読 1=VIP限定（フェーズ9）
   audios: { url: string; title: string | null; sortOrder: number }[];
+  words: {
+    sentenceIndex: number;
+    word: string;
+    reading: string | null;
+    partOfSpeech: string | null;
+    meaningZh: string;
+    exampleJa: string | null;
+    exampleZh: string | null;
+    sortOrder: number;
+  }[];
 }

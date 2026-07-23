@@ -16,12 +16,14 @@ import ListItem from "@mui/material/ListItem";
 import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import Snackbar from "@mui/material/Snackbar";
+import Divider from "@mui/material/Divider";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import DeleteIcon from "@mui/icons-material/Delete";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import AudiotrackIcon from "@mui/icons-material/Audiotrack";
+import AddIcon from "@mui/icons-material/Add";
 import {
   createArticle,
   fetchAdminArticleDetail,
@@ -47,7 +49,27 @@ interface AudioRow {
   title: string;
 }
 
+/** 編集中の単語行（TextField 制御のため文番号は文字列で保持し、保存時に数値化する） */
+interface WordRow {
+  sentenceIndex: string;
+  word: string;
+  reading: string;
+  partOfSpeech: string;
+  meaningZh: string;
+  exampleJa: string;
+  exampleZh: string;
+}
+
 const EMPTY_HTML = "<p><br></p>"; // wangEditor の空コンテンツ
+const EMPTY_WORD: WordRow = {
+  sentenceIndex: "0",
+  word: "",
+  reading: "",
+  partOfSpeech: "",
+  meaningZh: "",
+  exampleJa: "",
+  exampleZh: "",
+};
 
 export default function ArticleEditPage() {
   const params = useParams<{ id?: string[] }>();
@@ -67,6 +89,7 @@ export default function ArticleEditPage() {
   const [content, setContent] = useState("");
   const [translation, setTranslation] = useState(""); // 中国語訳のリッチテキスト。段落は本文と一対一対応
   const [audios, setAudios] = useState<AudioRow[]>([]);
+  const [words, setWords] = useState<WordRow[]>([]);
   const [accessLevel, setAccessLevel] = useState(0); // 0=無料試読 1=VIP限定（フェーズ9）
 
   const [titleError, setTitleError] = useState<string | null>(null);
@@ -95,6 +118,19 @@ export default function ArticleEditPage() {
         [...detail.audios]
           .sort((a, b) => a.sortOrder - b.sortOrder)
           .map((a) => ({ url: a.url, title: a.title || "" }))
+      );
+      setWords(
+        [...detail.words]
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map((w) => ({
+            sentenceIndex: String(w.sentenceIndex),
+            word: w.word,
+            reading: w.reading || "",
+            partOfSpeech: w.partOfSpeech || "",
+            meaningZh: w.meaningZh,
+            exampleJa: w.exampleJa || "",
+            exampleZh: w.exampleZh || "",
+          }))
       );
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "読み込みに失敗しました");
@@ -159,6 +195,10 @@ export default function ArticleEditPage() {
     });
   };
 
+  const updateWord = (index: number, patch: Partial<WordRow>) => {
+    setWords((list) => list.map((w, i) => (i === index ? { ...w, ...patch } : w)));
+  };
+
   /** 保存する（下書き status=0 / 公開 status=1）。アップロード中は送信を禁止する */
   const handleSave = async (status: number) => {
     if (!title.trim()) {
@@ -182,6 +222,18 @@ export default function ArticleEditPage() {
           title: a.title.trim() || null,
           sortOrder: i,
         })),
+        words: words
+          .filter((w) => w.word.trim() && w.meaningZh.trim())
+          .map((w, i) => ({
+            sentenceIndex: Number(w.sentenceIndex) || 0,
+            word: w.word.trim(),
+            reading: w.reading.trim() || null,
+            partOfSpeech: w.partOfSpeech.trim() || null,
+            meaningZh: w.meaningZh.trim(),
+            exampleJa: w.exampleJa.trim() || null,
+            exampleZh: w.exampleZh.trim() || null,
+            sortOrder: i,
+          })),
       };
       if (id) await updateArticle(id, payload);
       else await createArticle(payload);
@@ -411,6 +463,96 @@ export default function ArticleEditPage() {
                 e.target.value = "";
               }}
             />
+          </Box>
+
+          <Divider />
+
+          {/* 単語リスト：句中の単語マーカー＋単語表ボトムシートに使う単語表データ */}
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+              単語リスト（句中の難語。study スキルで事前生成して貼り付け可）
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1.5 }}>
+              単語は本文の表記と完全に一致していないと読書ページでマーカー表示されない（送り仮名・活用形は自動一致しない。例：本文が「食べます」の場合「食べる」では一致しない）。文番号は現状記録用途のみで、読書ページのマーカー表示には影響しない（本文の実際の内容から検索するため、文番号の正誤には依存しない）。
+            </Typography>
+            <Stack spacing={2}>
+              {words.map((w, index) => (
+                <Paper key={index} variant="outlined" sx={{ p: 2 }}>
+                  <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
+                    <TextField
+                      size="small"
+                      label="文番号"
+                      type="number"
+                      value={w.sentenceIndex}
+                      onChange={(e) => updateWord(index, { sentenceIndex: e.target.value })}
+                      sx={{ width: 90 }}
+                    />
+                    <TextField
+                      size="small"
+                      label="単語（本文と表記が一致）"
+                      value={w.word}
+                      onChange={(e) => updateWord(index, { word: e.target.value })}
+                      sx={{ width: 180 }}
+                    />
+                    <TextField
+                      size="small"
+                      label="ふりがな"
+                      value={w.reading}
+                      onChange={(e) => updateWord(index, { reading: e.target.value })}
+                      sx={{ width: 140 }}
+                    />
+                    <TextField
+                      size="small"
+                      label="品詞"
+                      value={w.partOfSpeech}
+                      onChange={(e) => updateWord(index, { partOfSpeech: e.target.value })}
+                      sx={{ width: 100 }}
+                    />
+                    <Box sx={{ flexGrow: 1 }} />
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => setWords((list) => list.filter((_, i) => i !== index))}
+                      aria-label="単語を削除"
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Stack>
+                  <TextField
+                    size="small"
+                    label="中国語の意味"
+                    value={w.meaningZh}
+                    onChange={(e) => updateWord(index, { meaningZh: e.target.value })}
+                    fullWidth
+                    sx={{ mb: 1.5 }}
+                  />
+                  <Stack direction="row" spacing={1.5}>
+                    <TextField
+                      size="small"
+                      label="例文（日本語）"
+                      value={w.exampleJa}
+                      onChange={(e) => updateWord(index, { exampleJa: e.target.value })}
+                      fullWidth
+                    />
+                    <TextField
+                      size="small"
+                      label="例文（中国語）"
+                      value={w.exampleZh}
+                      onChange={(e) => updateWord(index, { exampleZh: e.target.value })}
+                      fullWidth
+                    />
+                  </Stack>
+                </Paper>
+              ))}
+            </Stack>
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={() => setWords((list) => [...list, { ...EMPTY_WORD }])}
+              sx={{ mt: 1.5 }}
+            >
+              単語を追加
+            </Button>
           </Box>
 
           {/* 保存操作 */}

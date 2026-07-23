@@ -20,6 +20,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
 
 export type TranslationMode = "always" | "click" | "hidden";
 
@@ -44,6 +45,7 @@ interface AudioPlayerProps {
   onToggleText?: () => void;
   onPrevSentence?: () => void;
   onNextSentence?: () => void;
+  onOpenWords?: () => void; // 単語表ボトムシートを開く（渡されない場合はボタンを描画しない）
 }
 
 const SPEED_OPTIONS = [
@@ -86,6 +88,7 @@ export default function AudioPlayer({
   onToggleText,
   onPrevSentence,
   onNextSentence,
+  onOpenWords,
 }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [currentTime, setCurrentTime] = useState(0);
@@ -355,6 +358,7 @@ export default function AudioPlayer({
                 toolButton(<HeadphonesIcon />, "集中的リスニング", onOpenListening)}
               {onTranslationModeChange &&
                 toolButton(<TranslateIcon />, "通訳", () => setTransOpen(true))}
+              {onOpenWords && toolButton(<MenuBookIcon />, "単語", onOpenWords)}
             </Box>
           </>
         )}

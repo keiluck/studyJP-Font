@@ -33,6 +33,7 @@ export type EnTranslationMode = "always" | "click" | "hidden";
 interface EnAudioPlayerProps {
   src: string;
   onTimeUpdate?: (currentTime: number) => void;
+  onEnded?: () => void; // 再生終了時に通知し、跟読ハイライトの解除に使う
   speed: number;
   onSpeedChange: (speed: number) => void;
   onOpenListening: () => void;
@@ -65,6 +66,7 @@ const formatTime = (sec: number) => {
 export default function EnAudioPlayer({
   src,
   onTimeUpdate,
+  onEnded,
   speed,
   onSpeedChange,
   onOpenListening,
@@ -100,21 +102,25 @@ export default function EnAudioPlayer({
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
     const onError = () => setLoadError(true);
+    const onEndedInternal = () => {
+      onPause();
+      onEnded?.();
+    };
     audio.addEventListener("timeupdate", onTime);
     audio.addEventListener("loadedmetadata", onLoaded);
     audio.addEventListener("play", onPlay);
     audio.addEventListener("pause", onPause);
-    audio.addEventListener("ended", onPause);
+    audio.addEventListener("ended", onEndedInternal);
     audio.addEventListener("error", onError);
     return () => {
       audio.removeEventListener("timeupdate", onTime);
       audio.removeEventListener("loadedmetadata", onLoaded);
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
-      audio.removeEventListener("ended", onPause);
+      audio.removeEventListener("ended", onEndedInternal);
       audio.removeEventListener("error", onError);
     };
-  }, [onTimeUpdate]);
+  }, [onTimeUpdate, onEnded]);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = speed;

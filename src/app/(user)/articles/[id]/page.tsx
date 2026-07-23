@@ -14,7 +14,8 @@ import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 import Link from "next/link";
 import AudioPlayer, { TranslationMode } from "@/components/AudioPlayer";
-import SentenceItem, { renderRubyWords } from "@/components/SentenceItem";
+import SentenceItem, { renderVocabRubyWords } from "@/components/SentenceItem";
+import WordSheet from "@/components/WordSheet";
 import { fetchArticleDetail } from "@/api/article";
 import {
   activeWordIndexInSentence,
@@ -62,6 +63,14 @@ export default function ArticleReaderPage() {
   const [audioIndex, setAudioIndex] = useState(0); // 複数音声がある場合の現在のトラック
   const [activeIndex, setActiveIndex] = useState<number | null>(null); // 現在読み上げ中の文（概算）
   const [activeWordIndex, setActiveWordIndex] = useState<number | null>(null); // 文内で現在読み上げ中の単語（概算、跟読ハイライト用）
+  const [wordSheetOpen, setWordSheetOpen] = useState(false); // 単語表ボトムシートの開閉
+  const [activeVocabId, setActiveVocabId] = useState<number | null>(null); // 句中クリック由来のときの単語表ID。底部ボタンからは null
+
+  // 句中の単語表マーカーをクリックした際：単語表ボトムシートを該当単語にスクロール＋アクティブ表示して開く
+  const handleWordClick = useCallback((wordId: number) => {
+    setActiveVocabId(wordId);
+    setWordSheetOpen(true);
+  }, []);
 
   const activeRef = useRef<HTMLDivElement | null>(null);
   const listeningModeRef = useRef(listeningMode);
@@ -279,6 +288,8 @@ export default function ArticleReaderPage() {
               showRuby={showRuby}
               translationMode={translationMode}
               onClick={currentAudio ? () => jumpToUnit(idx) : undefined}
+              words={article.words}
+              onWordClick={handleWordClick}
             />
           </div>
         ))}
@@ -346,12 +357,14 @@ export default function ArticleReaderPage() {
                       color: "#1a1a2e",
                     }}
                   >
-                    {renderRubyWords(
+                    {renderVocabRubyWords(
                       listeningSentence.text,
                       ruby?.[listeningIndex],
+                      article.words,
                       showRuby,
                       false,
-                      listeningIndex === activeIndex ? activeWordIndex : null
+                      listeningIndex === activeIndex ? activeWordIndex : null,
+                      handleWordClick
                     )}
                   </Box>
                 ) : (
@@ -395,8 +408,20 @@ export default function ArticleReaderPage() {
           onToggleText={() => setShowText((v) => !v)}
           onPrevSentence={() => jumpToUnit(listeningIndex - 1)}
           onNextSentence={() => jumpToUnit(listeningIndex + 1)}
+          onOpenWords={() => {
+            setActiveVocabId(null);
+            setWordSheetOpen(true);
+          }}
         />
       )}
+
+      {/* 単語表ボトムシート：下部プレイヤーの「単語」ボタン、句中の単語マーカークリックの2入口から同一コンポーネントを開く */}
+      <WordSheet
+        open={wordSheetOpen}
+        onClose={() => setWordSheetOpen(false)}
+        words={[...article.words].sort((a, b) => a.sortOrder - b.sortOrder)}
+        activeWordId={activeVocabId}
+      />
     </Box>
   );
 }
